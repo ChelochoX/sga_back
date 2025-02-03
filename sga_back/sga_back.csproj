@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
-	  <!-- Generar el archivo de documentación XML -->
-	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
-	  <DocumentationFile>bin\Debug\net8.0\sga_back.xml</DocumentationFile>
+	<!-- Generar el archivo de documentación XML -->
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	<DocumentationFile>bin\Debug\net8.0\sga_back.xml</DocumentationFile>
 	  
   </PropertyGroup>
 
