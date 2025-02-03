@@ -1,5 +1,7 @@
 ﻿using sga_back.Repositories;
 using sga_back.Repositories.Interfaces;
+using sga_back.Services;
+using sga_back.Services.Interfaces;
 
 namespace sga_back.Configurations;
 
@@ -13,7 +15,7 @@ public static class DependencyInjection
 
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
-        //services.AddSingleton<IMotoService, MotoService>();
+        _ = services.AddSingleton<IPersonasService, PersonasService>();
         return services;
     }
 }
