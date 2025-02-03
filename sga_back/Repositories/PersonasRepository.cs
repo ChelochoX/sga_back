@@ -51,5 +51,23 @@ public class PersonasRepository : IPersonasRepository
         }
     }
 
+    public async Task<int> Actualizar(Persona persona)
+    {
+        string query = @"
+            UPDATE Personas
+            SET nombres = @Nombres, apellidos = @Apellidos, email = @Email, telefono = @Telefono,
+                direccion = @Direccion, fecha_nacimiento = @FechaNacimiento, cedula = @Cedula, 
+                ruc = @Ruc, digito_verificador = @DigitoVerificador
+            WHERE id_persona = @IdPersona";
 
+        int filasAfectadas = await _conexion.ExecuteAsync(query, persona);
+        return filasAfectadas;
+    }
+
+    public async Task<bool> Eliminar(int id)
+    {
+        string query = "DELETE FROM Personas WHERE id_persona = @Id";
+        int filasAfectadas = await _conexion.ExecuteAsync(query, new { Id = id });
+        return filasAfectadas > 0;
+    }
 }

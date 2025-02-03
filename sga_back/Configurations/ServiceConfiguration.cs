@@ -18,5 +18,6 @@ public static class ServiceConfiguration
                         .AllowAnyMethod();
                 });
         });
+        _ = services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
     }
 }

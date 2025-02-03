@@ -55,22 +55,24 @@ public class ErrorHandlingMiddleware
                 response.Errors.AddRange(validationException.Errors.Select(e => e.ErrorMessage));
                 break;
 
+            case InvalidOperationException invalidOperationException:
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Errors.Add(invalidOperationException.Message);
+                break;
+
             case RepositoryException repositoryException:
                 response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 response.Errors.Add(repositoryException.Message);
+
                 if (showStackTrace)
                 {
-                    response.Errors.Add(repositoryException.InnerException.StackTrace);
+                    string? stackTrace = repositoryException.InnerException?.StackTrace;
+                    if (!string.IsNullOrEmpty(stackTrace))
+                    {
+                        response.Errors.Add(stackTrace);
+                    }
                 }
-                break;
 
-            case ServiceException serviceException:
-                response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response.Errors.Add(serviceException.Message);
-                if (!showStackTrace)
-                {
-                    response.Errors.Add(serviceException.InnerException.StackTrace);
-                }
                 break;
 
             case NoDataFoundException noDataFoundException:

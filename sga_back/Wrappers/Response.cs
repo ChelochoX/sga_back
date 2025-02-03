@@ -17,7 +17,7 @@ public class Response<T>
     public int StatusCode { get; set; }
 
     [JsonPropertyName("Message")]
-    public string Message { get; set; }
+    public string? Message { get; set; }
 
 
     public Response()
