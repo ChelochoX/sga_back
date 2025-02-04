@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
+using ValidationException = FluentValidation.ValidationException;
 
 namespace sga_back.Services;
 
@@ -11,24 +13,33 @@ public class PersonasService : IPersonasService
     private readonly IPersonasRepository _repository;
     private readonly IMapper _mapper;
     private readonly ILogger<PersonasService> _logger;
+    private readonly IValidator<PersonaRequest> _validator;
 
-    public PersonasService(ILogger<PersonasService> logger, IPersonasRepository repository, IMapper mapper)
+    public PersonasService(ILogger<PersonasService> logger, IPersonasRepository repository, IMapper mapper, IValidator<PersonaRequest> validator)
     {
         _logger = logger;
         _repository = repository;
         _mapper = mapper;
+        _validator = validator;
     }
 
     public async Task<int> Insertar(PersonaRequest request)
     {
+
+        FluentValidation.Results.ValidationResult validationResult = await _validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationException(validationResult.Errors);
+        }
+
         _logger.LogInformation("Insertando persona con cédula: {Cedula}", request.Cedula);
 
         // Mapeo de request a modelo
-        var persona = _mapper.Map<Persona>(request);
+        Persona persona = _mapper.Map<Persona>(request);
         persona.FechaRegistro = DateTime.UtcNow;
 
         // Llamar al repositorio para insertar la persona
-        var id = await _repository.Insertar(persona);
+        int id = await _repository.Insertar(persona);
 
         // Si el repositorio retorna 0, significa que la cédula ya está registrada
         if (id == 0)
@@ -43,26 +54,16 @@ public class PersonasService : IPersonasService
 
     public async Task<int> Actualizar(int id, PersonaRequest request)
     {
-        var persona = _mapper.Map<Persona>(request);
+        Persona persona = _mapper.Map<Persona>(request);
         persona.IdPersona = id;
 
         int filasAfectadas = await _repository.Actualizar(persona);
-        if (filasAfectadas == 0)
-        {
-            throw new InvalidOperationException("No se encontró la persona para actualizar.");
-        }
-
-        return filasAfectadas;
+        return filasAfectadas == 0 ? throw new InvalidOperationException("No se encontró la persona para actualizar.") : filasAfectadas;
     }
 
     public async Task<bool> Eliminar(int id)
     {
         bool eliminado = await _repository.Eliminar(id);
-        if (!eliminado)
-        {
-            throw new InvalidOperationException("No se encontró la persona para eliminar.");
-        }
-
-        return eliminado;
+        return !eliminado ? throw new InvalidOperationException("No se encontró la persona para eliminar.") : eliminado;
     }
 }

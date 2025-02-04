@@ -6,8 +6,8 @@ namespace sga_back.Mappings;
 
 public class PersonasAutomapping : Profile
 {
-    protected PersonasAutomapping()
+    public PersonasAutomapping()
     {
-        CreateMap<PersonaRequest, Persona>();
+        _ = CreateMap<PersonaRequest, Persona>();
     }
 }
