@@ -11,15 +11,16 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        _ = services.AddSingleton<IPersonasRepository, PersonasRepository>();
+        _ = services.AddScoped<IPersonasRepository, PersonasRepository>();
+        _ = services.AddScoped<ICursosRepository, CursosRepository>();
         return services;
     }
 
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
         _ = services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-
         _ = services.AddScoped<IPersonasService, PersonasService>();
+        _ = services.AddScoped<ICursosService, CursosService>();
         return services;
     }
 }
