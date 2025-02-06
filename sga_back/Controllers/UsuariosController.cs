@@ -24,7 +24,7 @@ public class UsuariosController : ControllerBase
         return Ok(id);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("activarusuario/{id}")]
     public async Task<IActionResult> ActualizarUsuario(int id, [FromBody] UsuarioUpdateRequest request)
     {
         await _service.ActualizarUsuario(request, id);
