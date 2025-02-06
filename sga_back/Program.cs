@@ -13,6 +13,17 @@ IConfigurationRoot configuration = new ConfigurationBuilder()
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+// Configuración de Logs
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+// Puedes tener diferentes configuraciones según el entorno
+if (builder.Environment.IsDevelopment())
+{
+    builder.Logging.AddDebug();
+}
+
 // Add services to the container.
 builder.Services.AddRepositories();
 builder.Services.AddServices();

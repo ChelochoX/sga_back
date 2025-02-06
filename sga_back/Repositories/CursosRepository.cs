@@ -22,15 +22,40 @@ public class CursosRepository : ICursosRepository
         {
             _logger.LogInformation("Intentando insertar curso: {Nombre}", curso.Nombre);
 
-            string query = @"
-                    INSERT INTO Cursos (nombre, descripcion, duracion, unidad_duracion, costo, fecha_inicio, fecha_fin)
-                    VALUES (@Nombre, @Descripcion, @Duracion, @UnidadDuracion, @Costo, @FechaInicio, @FechaFin);
-                    SELECT CAST(SCOPE_IDENTITY() as int);";
+            // Verificar si ya existe un curso con el mismo nombre y rango de fechas
+            string queryVerificar = @"
+            SELECT COUNT(*) 
+            FROM Cursos 
+            WHERE nombre = @Nombre AND fecha_inicio = @FechaInicio AND fecha_fin = @FechaFin";
 
-            int id = await _conexion.ExecuteScalarAsync<int>(query, curso);
+            int existeCurso = await _conexion.ExecuteScalarAsync<int>(queryVerificar, new
+            {
+                curso.Nombre,
+                curso.FechaInicio,
+                curso.FechaFin
+            });
+
+            if (existeCurso > 0)
+            {
+                _logger.LogWarning("No se pudo insertar el curso. Ya existe un curso con el nombre {Nombre} entre las fechas {FechaInicio} y {FechaFin}.",
+                                    curso.Nombre, curso.FechaInicio, curso.FechaFin);
+                throw new ReglasdeNegocioException("Ya existe un curso con el mismo nombre y rango de fechas.");
+            }
+
+            // Insertar el curso si no existe duplicado
+            string queryInsertar = @"
+            INSERT INTO Cursos (nombre, descripcion, duracion, unidad_duracion, costo, fecha_inicio, fecha_fin)
+            VALUES (@Nombre, @Descripcion, @Duracion, @UnidadDuracion, @Costo, @FechaInicio, @FechaFin);
+            SELECT CAST(SCOPE_IDENTITY() as int);";
+
+            int id = await _conexion.ExecuteScalarAsync<int>(queryInsertar, curso);
             _logger.LogInformation("Curso insertado con ID: {IdCurso}", id);
 
             return id;
+        }
+        catch (ReglasdeNegocioException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -38,6 +63,7 @@ public class CursosRepository : ICursosRepository
             throw new RepositoryException("Ocurrió un error al intentar insertar el curso.", ex);
         }
     }
+
 
     public async Task<int> Actualizar(Curso curso)
     {
@@ -61,6 +87,10 @@ public class CursosRepository : ICursosRepository
 
             _logger.LogInformation("Curso con ID: {IdCurso} actualizado exitosamente.", curso.IdCurso);
             return filasAfectadas;
+        }
+        catch (NoDataFoundException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

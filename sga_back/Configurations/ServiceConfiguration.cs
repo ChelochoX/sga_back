@@ -1,5 +1,7 @@
-﻿using sga_back.Data;
+﻿using FluentValidation;
+using sga_back.Data;
 using System.Data;
+using System.Reflection;
 
 namespace sga_back.Configurations;
 
@@ -25,6 +27,10 @@ public static class ServiceConfiguration
                         .AllowAnyMethod();
                 });
         });
-        _ = services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+        // Registro de AutoMapper
+        services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+        // Registro de validadores con FluentValidation
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }

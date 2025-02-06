@@ -30,7 +30,7 @@ public class PersonasRepository : IPersonasRepository
             if (existeCedula > 0)
             {
                 _logger.LogWarning("No se pudo insertar la persona. La cédula {Cedula} ya está registrada.", persona.Cedula);
-                throw new RepositoryException("La cédula ya está registrada.");
+                throw new ReglasdeNegocioException("La cédula ya está registrada.");
             }
 
             // Verificar si el correo ya existe
@@ -40,7 +40,7 @@ public class PersonasRepository : IPersonasRepository
             if (existeEmail > 0)
             {
                 _logger.LogWarning("No se pudo insertar la persona. El correo {Email} ya está registrado.", persona.Email);
-                throw new RepositoryException("El correo electrónico ya está registrado.");
+                throw new ReglasdeNegocioException("El correo electrónico ya está registrado.");
             }
 
             // Si la cédula no existe, insertar el nuevo registro
@@ -54,7 +54,7 @@ public class PersonasRepository : IPersonasRepository
 
             return id;
         }
-        catch (RepositoryException)
+        catch (ReglasdeNegocioException)
         {
             throw;
         }

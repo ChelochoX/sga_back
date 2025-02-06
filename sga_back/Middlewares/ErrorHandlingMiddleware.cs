@@ -77,7 +77,7 @@ public class ErrorHandlingMiddleware
 
             case NoDataFoundException noDataFoundException:
                 response.StatusCode = (int)HttpStatusCode.NoContent;
-                break;
+                return Task.CompletedTask;
 
             case ReglasdeNegocioException reglasdeNegocioException:
                 response.StatusCode = (int)HttpStatusCode.BadRequest;

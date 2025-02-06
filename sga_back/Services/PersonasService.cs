@@ -14,13 +14,15 @@ public class PersonasService : IPersonasService
     private readonly IMapper _mapper;
     private readonly ILogger<PersonasService> _logger;
     private readonly IValidator<PersonaRequest> _validator;
+    private readonly IUsuariosRepository _usuariosRepository;
 
-    public PersonasService(ILogger<PersonasService> logger, IPersonasRepository repository, IMapper mapper, IValidator<PersonaRequest> validator)
+    public PersonasService(ILogger<PersonasService> logger, IPersonasRepository repository, IMapper mapper, IValidator<PersonaRequest> validator, IUsuariosRepository usuariosRepository)
     {
         _logger = logger;
         _repository = repository;
         _mapper = mapper;
         _validator = validator;
+        _usuariosRepository = usuariosRepository;
     }
 
     public async Task<int> Insertar(PersonaRequest request)
@@ -49,6 +51,10 @@ public class PersonasService : IPersonasService
         }
 
         _logger.LogInformation("Persona insertada exitosamente con ID: {Id}", id);
+
+        // Crear automáticamente el usuario inactivo
+        await CrearUsuarioAutomaticoParaPersona(id, persona.Nombres, persona.Apellidos);
+
         return id;
     }
 
@@ -65,5 +71,47 @@ public class PersonasService : IPersonasService
     {
         bool eliminado = await _repository.Eliminar(id);
         return !eliminado ? throw new InvalidOperationException("No se encontró la persona para eliminar.") : eliminado;
+    }
+
+    private async Task CrearUsuarioAutomaticoParaPersona(int idPersona, string nombres, string apellidos)
+    {
+        // Generar nombre de usuario único
+        string nombreUsuario = await GenerarNombreUsuarioUnico(nombres, apellidos);
+
+        // Crear objeto usuario
+        Usuario nuevoUsuario = new()
+        {
+            IdPersona = idPersona,
+            NombreUsuario = nombreUsuario,
+            ContrasenaHash = string.Empty,  // Sin contraseña por ahora
+            Estado = "Inactivo",
+            FechaCreacion = DateTime.UtcNow
+        };
+
+        // Insertar el usuario en la base de datos
+        await _usuariosRepository.Insertar(nuevoUsuario);
+
+        _logger.LogInformation("Usuario creado automáticamente para la persona con ID: {IdPersona}", idPersona);
+    }
+
+    private async Task<string> GenerarNombreUsuarioUnico(string nombres, string apellidos)
+    {
+        // Tomar los primeros 3 caracteres de los nombres y apellidos
+        string nombreBase = $"{nombres[..Math.Min(5, nombres.Length)].ToLower()}.{apellidos[..Math.Min(5, apellidos.Length)].ToLower()}";
+
+        // Generar un hash corto basado en GUID para evitar duplicados
+        string hashUnico = Guid.NewGuid().ToString("N").Substring(0, 4);  // 4 caracteres únicos
+
+        // Formar el nombre de usuario completo
+        string nombreUsuario = $"{nombreBase}{hashUnico}";
+
+        // Verificar si ya existe en la base de datos
+        while (await _usuariosRepository.ExisteNombreUsuario(nombreUsuario))
+        {
+            hashUnico = Guid.NewGuid().ToString("N").Substring(0, 4);  // Generar un nuevo hash si hay conflicto
+            nombreUsuario = $"{nombreBase}{hashUnico}";
+        }
+
+        return nombreUsuario;
     }
 }
