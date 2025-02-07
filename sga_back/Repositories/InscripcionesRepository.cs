@@ -92,16 +92,23 @@ public class InscripcionesRepository : IInscripcionesRepository
     {
         try
         {
-            _logger.LogInformation("Eliminando inscripción con ID: {IdInscripcion}", idInscripcion);
+            _logger.LogInformation("Intentando eliminar inscripción con ID: {IdInscripcion}", idInscripcion);
 
             string query = "DELETE FROM Inscripciones WHERE id_inscripcion = @IdInscripcion";
             int filasAfectadas = await _conexion.ExecuteAsync(query, new { IdInscripcion = idInscripcion });
 
-            return filasAfectadas > 0;
+            if (filasAfectadas == 0)
+            {
+                _logger.LogWarning("No se encontró la inscripción con ID: {IdInscripcion} para eliminar.", idInscripcion);
+                return false;
+            }
+
+            _logger.LogInformation("Inscripción con ID: {IdInscripcion} eliminada exitosamente.", idInscripcion);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al eliminar inscripción.");
+            _logger.LogError(ex, "Error al eliminar inscripción con ID: {IdInscripcion}", idInscripcion);
             throw new RepositoryException("Ocurrió un error al intentar eliminar la inscripción.", ex);
         }
     }
@@ -110,12 +117,25 @@ public class InscripcionesRepository : IInscripcionesRepository
     {
         try
         {
+            _logger.LogInformation("Intentando obtener inscripción con ID: {IdInscripcion}", idInscripcion);
+
             string query = "SELECT * FROM Inscripciones WHERE id_inscripcion = @IdInscripcion";
-            return await _conexion.QueryFirstOrDefaultAsync<Inscripcion>(query, new { IdInscripcion = idInscripcion });
+            Inscripcion? inscripcion = await _conexion.QueryFirstOrDefaultAsync<Inscripcion>(query, new { IdInscripcion = idInscripcion });
+
+            if (inscripcion == null)
+            {
+                _logger.LogWarning("No se encontró la inscripción con ID: {IdInscripcion}", idInscripcion);
+            }
+            else
+            {
+                _logger.LogInformation("Inscripción obtenida exitosamente.");
+            }
+
+            return inscripcion;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener inscripción por ID.");
+            _logger.LogError(ex, "Error al obtener inscripción con ID: {IdInscripcion}", idInscripcion);
             throw new RepositoryException("Ocurrió un error al intentar obtener la inscripción.", ex);
         }
     }
@@ -124,8 +144,13 @@ public class InscripcionesRepository : IInscripcionesRepository
     {
         try
         {
+            _logger.LogInformation("Obteniendo todas las inscripciones.");
+
             string query = "SELECT * FROM Inscripciones";
-            return await _conexion.QueryAsync<Inscripcion>(query);
+            IEnumerable<Inscripcion> inscripciones = await _conexion.QueryAsync<Inscripcion>(query);
+
+            _logger.LogInformation("Total de inscripciones obtenidas: {TotalInscripciones}", inscripciones.Count());
+            return inscripciones;
         }
         catch (Exception ex)
         {
