@@ -30,7 +30,7 @@ public class UsuariosRepository : IUsuariosRepository
             if (existe > 0)
             {
                 _logger.LogWarning("El nombre de usuario {NombreUsuario} ya está registrado.", usuario.NombreUsuario);
-                throw new RepositoryException("El nombre de usuario ya está registrado.");
+                throw new ReglasdeNegocioException("El nombre de usuario ya está registrado.");
             }
 
             // Insertar el nuevo usuario
@@ -44,6 +44,10 @@ public class UsuariosRepository : IUsuariosRepository
             _logger.LogInformation("Usuario insertado con ID: {IdUsuario}", id);
 
             return id;
+        }
+        catch (ReglasdeNegocioException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

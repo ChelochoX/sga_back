@@ -15,6 +15,8 @@ public static class DependencyInjection
         _ = services.AddScoped<ICursosRepository, CursosRepository>();
         _ = services.AddScoped<IUsuariosRepository, UsuariosRepository>();
         _ = services.AddScoped<IRolesRepository, RolesRepository>();
+        _ = services.AddScoped<IUsuarioRolesRepository, UsuarioRolesRepository>();
+        _ = services.AddScoped<IInscripcionesRepository, InscripcionesRepository>();
         return services;
     }
 
@@ -25,6 +27,8 @@ public static class DependencyInjection
         _ = services.AddScoped<ICursosService, CursosService>();
         _ = services.AddScoped<IUsuariosService, UsuariosService>();
         _ = services.AddScoped<IRolesService, RolesService>();
+        _ = services.AddScoped<IUsuarioRolesService, UsuarioRolesService>();
+        _ = services.AddScoped<IInscripcionesService, InscripcionesService>();
         return services;
     }
 }
