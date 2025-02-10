@@ -7,4 +7,8 @@ public class Inscripcion
     public int IdCurso { get; set; }
     public DateTime FechaInscripcion { get; set; } = DateTime.UtcNow;
     public string Estado { get; set; } = "Activa";
+    public decimal MontoDescuento { get; set; }
+    public string MotivoDescuento { get; set; } = string.Empty;
+    public decimal MontoDescuentoPractica { get; set; }
+    public string MotivoDescuentoPractica { get; set; } = string.Empty;
 }

@@ -23,11 +23,10 @@ public class InscripcionesRepository : IInscripcionesRepository
         {
             _logger.LogInformation("Insertando nueva inscripción para persona ID: {IdPersona}, curso ID: {IdCurso}", inscripcion.IdPersona, inscripcion.IdCurso);
 
-            // Verificar si la inscripción ya existe
             string queryVerificar = @"
-            SELECT COUNT(*) 
-            FROM Inscripciones 
-            WHERE id_persona = @IdPersona AND id_curso = @IdCurso AND estado = 'Activa'";
+        SELECT COUNT(*) 
+        FROM Inscripciones 
+        WHERE id_persona = @IdPersona AND id_curso = @IdCurso AND estado = 'Activa'";
 
             int existe = await _conexion.ExecuteScalarAsync<int>(queryVerificar, new { inscripcion.IdPersona, inscripcion.IdCurso });
 
@@ -37,11 +36,10 @@ public class InscripcionesRepository : IInscripcionesRepository
                 throw new ReglasdeNegocioException("La persona ya está inscrita en este curso.");
             }
 
-            // Insertar la inscripción
             string queryInsertar = @"
-            INSERT INTO Inscripciones (id_persona, id_curso, fecha_inscripcion, estado)
-            VALUES (@IdPersona, @IdCurso, @FechaInscripcion, @Estado);
-            SELECT CAST(SCOPE_IDENTITY() as int);";
+        INSERT INTO Inscripciones (id_persona, id_curso, fecha_inscripcion, estado, monto_descuento, motivo_descuento, monto_descuento_practica, motivo_descuento_practica)
+        VALUES (@IdPersona, @IdCurso, @FechaInscripcion, @Estado, @MontoDescuento, @MotivoDescuento, @MontoDescuentoPractica, @MotivoDescuentoPractica);
+        SELECT CAST(SCOPE_IDENTITY() as int);";
 
             int id = await _conexion.ExecuteScalarAsync<int>(queryInsertar, inscripcion);
             _logger.LogInformation("Inscripción insertada con ID: {IdInscripcion}", id);
@@ -59,6 +57,7 @@ public class InscripcionesRepository : IInscripcionesRepository
         }
     }
 
+
     public async Task<int> Actualizar(Inscripcion inscripcion)
     {
         try
@@ -66,9 +65,11 @@ public class InscripcionesRepository : IInscripcionesRepository
             _logger.LogInformation("Actualizando inscripción con ID: {IdInscripcion}", inscripcion.IdInscripcion);
 
             string query = @"
-                    UPDATE Inscripciones
-                    SET id_persona = @IdPersona, id_curso = @IdCurso, estado = @Estado
-                    WHERE id_inscripcion = @IdInscripcion";
+        UPDATE Inscripciones
+        SET estado = @Estado,
+            monto_descuento = @MontoDescuento, motivo_descuento = @MotivoDescuento,
+            monto_descuento_practica = @MontoDescuentoPractica, motivo_descuento_practica = @MotivoDescuentoPractica
+        WHERE id_inscripcion = @IdInscripcion";
 
             int filasAfectadas = await _conexion.ExecuteAsync(query, inscripcion);
 
@@ -81,12 +82,17 @@ public class InscripcionesRepository : IInscripcionesRepository
             _logger.LogInformation("Inscripción actualizada con éxito.");
             return filasAfectadas;
         }
+        catch (NoDataFoundException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al actualizar inscripción.");
             throw new RepositoryException("Ocurrió un error al intentar actualizar la inscripción.", ex);
         }
     }
+
 
     public async Task<bool> Eliminar(int idInscripcion)
     {

@@ -8,7 +8,10 @@ public class CursoRequest
     public string? Descripcion { get; set; }
     public required int Duracion { get; set; }
     public required string UnidadDuracion { get; set; }
-    public required decimal Costo { get; set; }
+    public required int CantidadCuota { get; set; }
+    public required decimal MontoCuota { get; set; }
+    public required char TienePractica { get; set; }
+    public required decimal CostoPractica { get; set; }
     public required DateTime FechaInicio { get; set; }
     public required DateTime FechaFin { get; set; }
 }
@@ -28,8 +31,17 @@ public class CursoRequestValidator : AbstractValidator<CursoRequest>
             .Must(u => new[] { "Horas", "Dias", "Semanas", "Meses" }.Contains(u))
             .WithMessage("La unidad de duración debe ser 'Horas', 'Dias', 'Semanas' o 'Meses'.");
 
-        _ = RuleFor(c => c.Costo)
-            .GreaterThan(0).WithMessage("El costo del curso debe ser mayor a 0.");
+        _ = RuleFor(c => c.CantidadCuota)
+            .GreaterThan(0).WithMessage("La cantidad de cuotas debe ser mayor a 0.");
+
+        _ = RuleFor(c => c.MontoCuota)
+            .GreaterThan(0).WithMessage("El monto de la cuota debe ser mayor a 0.");
+
+        _ = RuleFor(c => c.TienePractica)
+            .NotEmpty().WithMessage("Debe especificar si el curso tiene práctica.");
+
+        _ = RuleFor(c => c.CostoPractica)
+            .GreaterThanOrEqualTo(0).WithMessage("El costo de la práctica no puede ser negativo.");
 
         _ = RuleFor(c => c.FechaInicio)
             .NotEmpty().WithMessage("La fecha de inicio es obligatoria.");

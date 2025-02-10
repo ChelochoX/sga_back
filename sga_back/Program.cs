@@ -59,13 +59,10 @@ if (app.Environment.IsDevelopment())
 ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Aplicacion Iniciada Correctamente");
 
-app.UseCors("AllowFrontend");
-
 app.UseHttpsRedirection();
-
-app.UseAuthorization();
 app.UseHandlingMiddleware();
-
+app.UseCors("AllowFrontend");
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
