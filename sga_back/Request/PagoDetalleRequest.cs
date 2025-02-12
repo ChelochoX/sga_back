@@ -4,7 +4,6 @@ namespace sga_back.Request;
 
 public class PagoDetalleRequest
 {
-    public int IdPago { get; set; }
     public string Concepto { get; set; }
     public decimal Monto { get; set; }
     public DateTime FechaVencimiento { get; set; }

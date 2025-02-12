@@ -2,15 +2,16 @@
 
 namespace sga_back.Request;
 
-public class PagoEncabezadoRequest
+public class PagoRequest
 {
     public int IdInscripcion { get; set; }
     public decimal Total { get; set; }
     public string TipoCuenta { get; set; }
     public decimal Descuento { get; set; }
-    public string? Observacion { get; set; }
+    public string Observacion { get; set; }
+    public List<PagoDetalleRequest> Detalles { get; set; } = new();
 }
-public class PagoEncabezadoRequestValidator : AbstractValidator<PagoEncabezadoRequest>
+public class PagoEncabezadoRequestValidator : AbstractValidator<PagoRequest>
 {
     public PagoEncabezadoRequestValidator()
     {

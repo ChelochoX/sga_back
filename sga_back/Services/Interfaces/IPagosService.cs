@@ -1,11 +1,12 @@
-﻿using sga_back.Models;
-using sga_back.Request;
+﻿using sga_back.Request;
+using sga_back.Response;
 
 namespace sga_back.Services.Interfaces;
 
 public interface IPagosService
 {
-    Task<int> InsertarPago(PagoEncabezadoRequest request);
-    Task<bool> ActualizarPago(PagoEncabezadoRequest request, int idPago);
-    Task<PagoEncabezado?> ObtenerPagoPorId(int idPago);
+    Task<int> InsertarPagoConDetalles(PagoRequest request);
+    Task<bool> ActualizarPagoConDetalles(int idPago, PagoRequest request);
+    Task<bool> EliminarPago(int idPago);
+    Task<PagoResponse?> ObtenerPagoPorId(int idPago);
 }

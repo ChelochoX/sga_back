@@ -4,12 +4,9 @@ namespace sga_back.Repositories.Interfaces;
 
 public interface IPagosRepository
 {
-    Task<int> InsertarEncabezado(PagoEncabezado pago);
-    Task<int> InsertarDetalle(PagoDetalle detalle);
-    Task<int> ActualizarEncabezado(PagoEncabezado pago);
-    Task<int> ActualizarDetalle(PagoDetalle detalle);
-    Task<bool> EliminarEncabezado(int idPago);
-    Task<bool> EliminarDetalle(int idDetalle);
-    Task<PagoEncabezado?> ObtenerEncabezadoPorId(int idPago);
+    Task<int> InsertarPagoConDetalles(PagoEncabezado pago, List<PagoDetalle> detalles);
+    Task<bool> ActualizarPagoConDetalles(PagoEncabezado pago, List<PagoDetalle> detalles);
+    Task<bool> EliminarPago(int idPago);
+    Task<PagoEncabezado?> ObtenerPagoPorId(int idPago);
     Task<IEnumerable<PagoDetalle>> ObtenerDetallesPorPago(int idPago);
 }
