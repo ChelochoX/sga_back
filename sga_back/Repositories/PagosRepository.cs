@@ -20,6 +20,11 @@ public class PagosRepository : IPagosRepository
 
     public async Task<int> InsertarPagoConDetalles(PagoEncabezado pago, List<PagoDetalle> detalles)
     {
+        if (_conexion.State != ConnectionState.Open)
+        {
+            _conexion.Open();
+        }
+
         using var transaction = _conexion.BeginTransaction();
         try
         {
