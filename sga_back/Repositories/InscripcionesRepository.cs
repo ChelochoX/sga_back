@@ -24,9 +24,9 @@ public class InscripcionesRepository : IInscripcionesRepository
             _logger.LogInformation("Insertando nueva inscripción para persona ID: {IdPersona}, curso ID: {IdCurso}", inscripcion.IdPersona, inscripcion.IdCurso);
 
             string queryVerificar = @"
-        SELECT COUNT(*) 
-        FROM Inscripciones 
-        WHERE id_persona = @IdPersona AND id_curso = @IdCurso AND estado = 'Activa'";
+            SELECT COUNT(*) 
+            FROM Inscripciones 
+            WHERE id_persona = @IdPersona AND id_curso = @IdCurso AND estado = 'Activa'";
 
             int existe = await _conexion.ExecuteScalarAsync<int>(queryVerificar, new { inscripcion.IdPersona, inscripcion.IdCurso });
 
@@ -37,9 +37,15 @@ public class InscripcionesRepository : IInscripcionesRepository
             }
 
             string queryInsertar = @"
-        INSERT INTO Inscripciones (id_persona, id_curso, fecha_inscripcion, estado, monto_descuento, motivo_descuento, monto_descuento_practica, motivo_descuento_practica)
-        VALUES (@IdPersona, @IdCurso, @FechaInscripcion, @Estado, @MontoDescuento, @MotivoDescuento, @MontoDescuentoPractica, @MotivoDescuentoPractica);
-        SELECT CAST(SCOPE_IDENTITY() as int);";
+            INSERT INTO Inscripciones (id_persona, id_curso, fecha_inscripcion, estado, 
+                                       monto_descuento, motivo_descuento, 
+                                       monto_descuento_practica, motivo_descuento_practica,
+                                       monto_descuento_matricula, motivo_descuento_matricula)
+            VALUES (@IdPersona, @IdCurso, @FechaInscripcion, @Estado, 
+                    @MontoDescuento, @MotivoDescuento, 
+                    @MontoDescuentoPractica, @MotivoDescuentoPractica,
+                    @MontoDescuentoMatricula, @MotivoDescuentoMatricula);
+            SELECT CAST(SCOPE_IDENTITY() as int);";
 
             int id = await _conexion.ExecuteScalarAsync<int>(queryInsertar, inscripcion);
             _logger.LogInformation("Inscripción insertada con ID: {IdInscripcion}", id);
@@ -65,11 +71,12 @@ public class InscripcionesRepository : IInscripcionesRepository
             _logger.LogInformation("Actualizando inscripción con ID: {IdInscripcion}", inscripcion.IdInscripcion);
 
             string query = @"
-        UPDATE Inscripciones
-        SET estado = @Estado,
-            monto_descuento = @MontoDescuento, motivo_descuento = @MotivoDescuento,
-            monto_descuento_practica = @MontoDescuentoPractica, motivo_descuento_practica = @MotivoDescuentoPractica
-        WHERE id_inscripcion = @IdInscripcion";
+            UPDATE Inscripciones
+            SET estado = @Estado,
+                monto_descuento = @MontoDescuento, motivo_descuento = @MotivoDescuento,
+                monto_descuento_practica = @MontoDescuentoPractica, motivo_descuento_practica = @MotivoDescuentoPractica,
+                monto_descuento_matricula = @MontoDescuentoMatricula, motivo_descuento_matricula = @MotivoDescuentoMatricula
+            WHERE id_inscripcion = @IdInscripcion";
 
             int filasAfectadas = await _conexion.ExecuteAsync(query, inscripcion);
 
@@ -125,7 +132,21 @@ public class InscripcionesRepository : IInscripcionesRepository
         {
             _logger.LogInformation("Intentando obtener inscripción con ID: {IdInscripcion}", idInscripcion);
 
-            string query = "SELECT * FROM Inscripciones WHERE id_inscripcion = @IdInscripcion";
+            string query = @"
+            SELECT id_inscripcion AS IdInscripcion,
+                   id_persona AS IdPersona,
+                   id_curso AS IdCurso,
+                   fecha_inscripcion AS FechaInscripcion,
+                   estado AS Estado,
+                   monto_descuento AS MontoDescuento,
+                   motivo_descuento AS MotivoDescuento,
+                   monto_descuento_practica AS MontoDescuentoPractica,
+                   motivo_descuento_practica AS MotivoDescuentoPractica,
+                   monto_descuento_matricula AS MontoDescuentoMatricula,
+                   motivo_descuento_matricula AS MotivoDescuentoMatricula
+            FROM Inscripciones 
+            WHERE id_inscripcion = @IdInscripcion";
+
             Inscripcion? inscripcion = await _conexion.QueryFirstOrDefaultAsync<Inscripcion>(query, new { IdInscripcion = idInscripcion });
 
             if (inscripcion == null)
@@ -145,6 +166,7 @@ public class InscripcionesRepository : IInscripcionesRepository
             throw new RepositoryException("Ocurrió un error al intentar obtener la inscripción.", ex);
         }
     }
+
 
     public async Task<IEnumerable<Inscripcion>> ObtenerTodas()
     {

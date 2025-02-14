@@ -8,8 +8,8 @@ public class PagoDetalle
     public decimal Monto { get; set; }
     public DateTime FechaVencimiento { get; set; }
     public DateTime? FechaPago { get; set; }
-    public string TipoPago { get; set; }
+    public string? TipoPago { get; set; }
     public string? Referencia { get; set; }
     public string? VoucherNumero { get; set; }
-    public string Estado { get; set; }
+    public string? Estado { get; set; }
 }

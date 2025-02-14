@@ -7,4 +7,5 @@ public interface ICursosRepository
     Task<int> Insertar(Curso curso);
     Task<int> Actualizar(Curso curso);
     Task<bool> Eliminar(int id);
+    Task<Curso?> ObtenerPorId(int idCurso);
 }

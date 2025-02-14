@@ -8,6 +8,7 @@ public class Curso
     public int Duracion { get; set; }
     public string UnidadDuracion { get; set; } = string.Empty;
     public int CantidadCuota { get; set; }
+    public decimal MontoMatricula { get; set; }  // NUEVO: Monto de matrícula
     public decimal MontoCuota { get; set; }
     public char TienePractica { get; set; }
     public decimal CostoPractica { get; set; }

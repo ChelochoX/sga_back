@@ -6,12 +6,18 @@ public class InscripcionRequest
 {
     public int IdPersona { get; set; }
     public int IdCurso { get; set; }
-    public string? Estado { get; set; } = "Activa";
+    public string Estado { get; set; } = "Activa";
+
     public decimal MontoDescuento { get; set; }
-    public required string MotivoDescuento { get; set; }
+    public string MotivoDescuento { get; set; } = string.Empty;
+
     public decimal MontoDescuentoPractica { get; set; }
-    public string? MotivoDescuentoPractica { get; set; }
+    public string MotivoDescuentoPractica { get; set; } = string.Empty;
+
+    public decimal MontoDescuentoMatricula { get; set; }
+    public string MotivoDescuentoMatricula { get; set; } = string.Empty;
 }
+
 public class InscripcionRequestValidator : AbstractValidator<InscripcionRequest>
 {
     public InscripcionRequestValidator()
@@ -35,6 +41,5 @@ public class InscripcionRequestValidator : AbstractValidator<InscripcionRequest>
 
         _ = RuleFor(i => i.MontoDescuentoPractica)
             .GreaterThanOrEqualTo(0).WithMessage("El monto de descuento de práctica no puede ser negativo.");
-
     }
 }

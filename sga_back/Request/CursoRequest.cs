@@ -9,6 +9,7 @@ public class CursoRequest
     public required int Duracion { get; set; }
     public required string UnidadDuracion { get; set; }
     public required int CantidadCuota { get; set; }
+    public required decimal MontoMatricula { get; set; }
     public required decimal MontoCuota { get; set; }
     public required char TienePractica { get; set; }
     public required decimal CostoPractica { get; set; }
@@ -34,6 +35,9 @@ public class CursoRequestValidator : AbstractValidator<CursoRequest>
         _ = RuleFor(c => c.CantidadCuota)
             .GreaterThan(0).WithMessage("La cantidad de cuotas debe ser mayor a 0.");
 
+        _ = RuleFor(c => c.MontoMatricula)
+            .GreaterThanOrEqualTo(0).WithMessage("El monto de la matrícula no puede ser negativo.");
+
         _ = RuleFor(c => c.MontoCuota)
             .GreaterThan(0).WithMessage("El monto de la cuota debe ser mayor a 0.");
 
@@ -49,5 +53,6 @@ public class CursoRequestValidator : AbstractValidator<CursoRequest>
         _ = RuleFor(c => c.FechaFin)
             .NotEmpty().WithMessage("La fecha de fin es obligatoria.")
             .GreaterThan(c => c.FechaInicio).WithMessage("La fecha de fin debe ser posterior a la fecha de inicio.");
+
     }
 }

@@ -22,38 +22,14 @@ public class CursosRepository : ICursosRepository
         {
             _logger.LogInformation("Intentando insertar curso: {Nombre}", curso.Nombre);
 
-            string queryVerificar = @"
-        SELECT COUNT(*) 
-        FROM Cursos 
-        WHERE nombre = @Nombre AND fecha_inicio = @FechaInicio AND fecha_fin = @FechaFin";
-
-            int existeCurso = await _conexion.ExecuteScalarAsync<int>(queryVerificar, new
-            {
-                curso.Nombre,
-                curso.FechaInicio,
-                curso.FechaFin
-            });
-
-            if (existeCurso > 0)
-            {
-                _logger.LogWarning("No se pudo insertar el curso. Ya existe un curso con el nombre {Nombre} entre las fechas {FechaInicio} y {FechaFin}.",
-                                    curso.Nombre, curso.FechaInicio, curso.FechaFin);
-                throw new ReglasdeNegocioException("Ya existe un curso con el mismo nombre y rango de fechas.");
-            }
-
             string queryInsertar = @"
-        INSERT INTO Cursos (nombre, descripcion, duracion, unidad_duracion, cantidad_cuota, monto_cuota, tiene_practica, costo_practica, fecha_inicio, fecha_fin)
-        VALUES (@Nombre, @Descripcion, @Duracion, @UnidadDuracion, @CantidadCuota, @MontoCuota, @TienePractica, @CostoPractica, @FechaInicio, @FechaFin);
-        SELECT CAST(SCOPE_IDENTITY() as int);";
+            INSERT INTO Cursos (nombre, descripcion, duracion, unidad_duracion, cantidad_cuota, monto_matricula, monto_cuota, tiene_practica, costo_practica, fecha_inicio, fecha_fin)
+            VALUES (@Nombre, @Descripcion, @Duracion, @UnidadDuracion, @CantidadCuota, @MontoMatricula, @MontoCuota, @TienePractica, @CostoPractica, @FechaInicio, @FechaFin);
+            SELECT CAST(SCOPE_IDENTITY() as int);";
 
             int id = await _conexion.ExecuteScalarAsync<int>(queryInsertar, curso);
             _logger.LogInformation("Curso insertado con ID: {IdCurso}", id);
-
             return id;
-        }
-        catch (ReglasdeNegocioException)
-        {
-            throw;
         }
         catch (Exception ex)
         {
@@ -62,8 +38,6 @@ public class CursosRepository : ICursosRepository
         }
     }
 
-
-
     public async Task<int> Actualizar(Curso curso)
     {
         try
@@ -71,11 +45,11 @@ public class CursosRepository : ICursosRepository
             _logger.LogInformation("Intentando actualizar curso con ID: {IdCurso}", curso.IdCurso);
 
             string query = @"
-        UPDATE Cursos
-        SET nombre = @Nombre, descripcion = @Descripcion, duracion = @Duracion, unidad_duracion = @UnidadDuracion, 
-            cantidad_cuota = @CantidadCuota, monto_cuota = @MontoCuota, tiene_practica = @TienePractica,
-            costo_practica = @CostoPractica, fecha_inicio = @FechaInicio, fecha_fin = @FechaFin
-        WHERE id_curso = @IdCurso";
+            UPDATE Cursos
+            SET nombre = @Nombre, descripcion = @Descripcion, duracion = @Duracion, unidad_duracion = @UnidadDuracion, 
+                cantidad_cuota = @CantidadCuota, monto_matricula = @MontoMatricula, monto_cuota = @MontoCuota, 
+                tiene_practica = @TienePractica, costo_practica = @CostoPractica, fecha_inicio = @FechaInicio, fecha_fin = @FechaFin
+            WHERE id_curso = @IdCurso";
 
             int filasAfectadas = await _conexion.ExecuteAsync(query, curso);
 
@@ -88,17 +62,12 @@ public class CursosRepository : ICursosRepository
             _logger.LogInformation("Curso con ID: {IdCurso} actualizado exitosamente.", curso.IdCurso);
             return filasAfectadas;
         }
-        catch (NoDataFoundException)
-        {
-            throw;
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al actualizar curso con ID: {IdCurso}", curso.IdCurso);
             throw new RepositoryException("Ocurrió un error al intentar actualizar el curso.", ex);
         }
     }
-
 
     public async Task<bool> Eliminar(int id)
     {
@@ -122,6 +91,49 @@ public class CursosRepository : ICursosRepository
         {
             _logger.LogError(ex, "Error al eliminar curso con ID: {IdCurso}", id);
             throw new RepositoryException("Ocurrió un error al intentar eliminar el curso.", ex);
+        }
+    }
+
+    public async Task<Curso?> ObtenerPorId(int idCurso)
+    {
+        try
+        {
+            _logger.LogInformation("Buscando curso con ID: {IdCurso}", idCurso);
+
+            string query = @"
+            SELECT 
+                id_curso AS IdCurso, 
+                nombre AS Nombre, 
+                descripcion AS Descripcion, 
+                duracion AS Duracion, 
+                unidad_duracion AS UnidadDuracion, 
+                cantidad_cuota AS CantidadCuota, 
+                monto_matricula AS MontoMatricula, 
+                monto_cuota AS MontoCuota, 
+                tiene_practica AS TienePractica, 
+                costo_practica AS CostoPractica, 
+                fecha_inicio AS FechaInicio, 
+                fecha_fin AS FechaFin
+            FROM Cursos 
+            WHERE id_curso = @IdCurso";
+
+            Curso? curso = await _conexion.QueryFirstOrDefaultAsync<Curso>(query, new { IdCurso = idCurso });
+
+            if (curso == null)
+            {
+                _logger.LogWarning("No se encontró el curso con ID: {IdCurso}", idCurso);
+            }
+            else
+            {
+                _logger.LogInformation("Curso encontrado: {NombreCurso}", curso.Nombre);
+            }
+
+            return curso;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener curso por ID: {IdCurso}", idCurso);
+            throw new RepositoryException("Ocurrió un error al obtener el curso.", ex);
         }
     }
 }
