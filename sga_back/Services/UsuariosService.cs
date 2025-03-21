@@ -48,4 +48,9 @@ public class UsuariosService : IUsuariosService
 
         return await _repository.ActualizarUsuario(idUsuario, request.NombreUsuario, request.NuevaContrasena);
     }
+
+    public async Task<Usuario?> ValidarCredenciales(string usuario, string contrasena)
+    {
+        return await _repository.ValidarCredenciales(usuario, contrasena);
+    }
 }

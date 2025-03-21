@@ -8,4 +8,5 @@ public interface IUsuariosRepository
     Task<bool> Eliminar(int id);
     Task<bool> ExisteNombreUsuario(string nombreUsuario);
     Task<bool> ActualizarUsuario(int idUsuario, string nombreUsuario, string nuevaContrasena);
+    Task<Usuario?> ValidarCredenciales(string usuario, string contrasena);
 }

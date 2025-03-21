@@ -4,6 +4,7 @@ public class Usuario
 {
     public int IdUsuario { get; set; }
     public int IdPersona { get; set; }
+    public int IdRol { get; set; }
     public string NombreUsuario { get; set; } = string.Empty;
     public string ContrasenaHash { get; set; } = string.Empty;
     public string? Estado { get; set; }

@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.AspNetCore.Identity;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -10,11 +11,13 @@ public class UsuariosRepository : IUsuariosRepository
 {
     private readonly IDbConnection _conexion;
     private readonly ILogger<UsuariosRepository> _logger;
+    private readonly PasswordHasher<string> _passwordHasher;
 
     public UsuariosRepository(ILogger<UsuariosRepository> logger, IDbConnection conexion)
     {
         _logger = logger;
         _conexion = conexion;
+        _passwordHasher = new PasswordHasher<string>();
     }
 
     public async Task<int> Insertar(Usuario usuario)
@@ -32,6 +35,8 @@ public class UsuariosRepository : IUsuariosRepository
                 _logger.LogWarning("El nombre de usuario {NombreUsuario} ya está registrado.", usuario.NombreUsuario);
                 throw new ReglasdeNegocioException("El nombre de usuario ya está registrado.");
             }
+
+            usuario.ContrasenaHash = _passwordHasher.HashPassword(null, usuario.ContrasenaHash);
 
             // Insertar el nuevo usuario
             string queryInsertar = @"
@@ -122,6 +127,29 @@ public class UsuariosRepository : IUsuariosRepository
             _logger.LogError(ex, "Error al actualizar usuario con ID: {IdUsuario}", idUsuario);
             throw new RepositoryException("Ocurrió un error al intentar actualizar el usuario.", ex);
         }
+    }
+
+    public async Task<Usuario?> ValidarCredenciales(string usuario, string contrasena)
+    {
+        string query = @"
+            SELECT u.id_usuario, u.nombre_usuario, u.contrasena_hash, ur.id_rol
+            FROM Usuarios u
+            INNER JOIN Usuario_Roles ur ON u.id_usuario = ur.id_usuario
+            WHERE u.nombre_usuario = @NombreUsuario";
+
+        var usuarioDb = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { NombreUsuario = usuario });
+
+        if (usuarioDb == null) return null; // Usuario no encontrado
+
+        // 🔐 Verificación del hash de la contraseña
+        var resultado = _passwordHasher.VerifyHashedPassword(null, usuarioDb.ContrasenaHash, contrasena);
+
+        if (resultado == PasswordVerificationResult.Success)
+        {
+            return usuarioDb;
+        }
+
+        return null; // Contraseña incorrecta
     }
 
 }
