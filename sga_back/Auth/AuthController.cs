@@ -25,8 +25,27 @@ public class AuthController : ControllerBase
         if (usuario == null)
             return Unauthorized("Credenciales incorrectas.");
 
-        var token = _jwtService.GenerarToken(usuario.IdUsuario, usuario.IdRol, usuario.NombreUsuario);
+        var token = _jwtService.GenerarToken(
+                      usuario.IdUsuario,
+                      usuario.IdRol,
+                      usuario.NombreUsuario,
+                      usuario.RequiereCambioContrasena
+        );
 
         return Ok(new { Token = token });
+    }
+
+    [HttpPost("cambiar-contrasena")]
+    public async Task<IActionResult> CambiarContrasena([FromBody] CambiarContrasenaRequest request)
+    {
+        if (request.NuevaContrasena != request.ConfirmarContrasena)
+            return BadRequest("Las contraseñas no coinciden.");
+
+        var resultado = await _service.CambiarContrasena(request.IdUsuario, request.NuevaContrasena);
+
+        if (!resultado)
+            return BadRequest("No se pudo cambiar la contraseña. Verifica tu información.");
+
+        return Ok("Contraseña cambiada exitosamente. Ahora puedes acceder al sistema.");
     }
 }

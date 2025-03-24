@@ -10,4 +10,6 @@ public class Usuario
     public string? Estado { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
+    public string ContrasenaTemporal { get; set; }
+    public bool RequiereCambioContrasena { get; set; }
 }

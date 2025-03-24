@@ -15,13 +15,14 @@ public class JwtService
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SecretKey));
     }
 
-    public string GenerarToken(int idUsuario, int idRol, string nombreUsuario)
+    public string GenerarToken(int idUsuario, int idRol, string nombreUsuario, bool requiereCambioContrasena)
     {
         var claims = new[]
         {
                 new Claim("id_usuario", idUsuario.ToString()),
                 new Claim("id_rol", idRol.ToString()),
-                new Claim("nombre_usuario", nombreUsuario)
+                new Claim("nombre_usuario", nombreUsuario),
+                new Claim("requiere_cambio_contrasena", requiereCambioContrasena.ToString())
         };
 
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256);

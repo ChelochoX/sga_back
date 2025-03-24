@@ -4,6 +4,7 @@ using sga_back.Models;
 using sga_back.Repositories.Interfaces;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
+using sga_back.Wrappers;
 using ValidationException = FluentValidation.ValidationException;
 
 namespace sga_back.Services;
@@ -78,12 +79,16 @@ public class PersonasService : IPersonasService
         // Generar nombre de usuario único
         string nombreUsuario = await GenerarNombreUsuarioUnico(nombres, apellidos);
 
+        // Generar contraseña temporal
+        string contrasenaTemporal = PasswordGenerator.GenerarContrasenaTemporal();
+
         // Crear objeto usuario
         Usuario nuevoUsuario = new()
         {
             IdPersona = idPersona,
             NombreUsuario = nombreUsuario,
-            ContrasenaHash = string.Empty,  // Sin contraseña por ahora
+            ContrasenaHash = contrasenaTemporal,
+            ContrasenaTemporal = contrasenaTemporal,
             Estado = "Inactivo",
             FechaCreacion = DateTime.UtcNow
         };

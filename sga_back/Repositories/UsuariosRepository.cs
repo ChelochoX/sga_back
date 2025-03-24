@@ -40,8 +40,8 @@ public class UsuariosRepository : IUsuariosRepository
 
             // Insertar el nuevo usuario
             string queryInsertar = @"
-                INSERT INTO Usuarios (id_persona, nombre_usuario, contrasena_hash, estado, fecha_creacion)
-                VALUES (@IdPersona, @NombreUsuario, @ContrasenaHash, @Estado, @FechaCreacion);
+                INSERT INTO Usuarios (id_persona, nombre_usuario, contrasena_hash, estado, fecha_creacion,contrasena_temporal,requiere_cambio_contrasena)
+                VALUES (@IdPersona, @NombreUsuario, @ContrasenaHash, @Estado, @FechaCreacion,@ContrasenaTemporal,1);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             usuario.FechaCreacion = DateTime.UtcNow;
@@ -98,12 +98,15 @@ public class UsuariosRepository : IUsuariosRepository
         {
             _logger.LogInformation("Intentando actualizar usuario con ID: {IdUsuario}", idUsuario);
 
+            string hashContrasena = _passwordHasher.HashPassword(null, nuevaContrasena);
+
             string query = @"
             UPDATE Usuarios
             SET nombre_usuario = @NombreUsuario, 
                 contrasena_hash = @ContrasenaHash, 
                 estado = 'Activo', 
                 fecha_modificacion = GETDATE()
+                requiere_cambio_contrasena = 0
             WHERE id_usuario = @IdUsuario";
 
             int filasAfectadas = await _conexion.ExecuteAsync(query, new
@@ -132,10 +135,12 @@ public class UsuariosRepository : IUsuariosRepository
     public async Task<Usuario?> ValidarCredenciales(string usuario, string contrasena)
     {
         string query = @"
-            SELECT u.id_usuario, u.nombre_usuario, u.contrasena_hash, ur.id_rol
+            SELECT u.id_usuario, u.nombre_usuario, u.contrasena_hash, 
+                   u.requiere_cambio_contrasena, ur.id_rol
             FROM Usuarios u
             INNER JOIN Usuario_Roles ur ON u.id_usuario = ur.id_usuario
-            WHERE u.nombre_usuario = @NombreUsuario";
+            WHERE u.nombre_usuario = @NombreUsuario
+              AND u.estado = 'Activo'";
 
         var usuarioDb = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { NombreUsuario = usuario });
 
@@ -152,4 +157,25 @@ public class UsuariosRepository : IUsuariosRepository
         return null; // Contraseña incorrecta
     }
 
+    public async Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena)
+    {
+        string query = @"
+        UPDATE Usuarios
+        SET contrasena_hash = @hashContrasena,
+            estado = @Estado,
+            requiere_cambio_contrasena = @RequiereCambio
+        WHERE id_usuario = @IdUsuario";
+
+        string hashContrasena = _passwordHasher.HashPassword(null, nuevaContrasena);
+
+        int filasAfectadas = await _conexion.ExecuteAsync(query, new
+        {
+            IdUsuario = idUsuario,
+            ContrasenaHash = hashContrasena,
+            Estado = estado,
+            RequiereCambio = requiereCambioContrasena
+        });
+
+        return filasAfectadas > 0;
+    }
 }

@@ -53,4 +53,14 @@ public class UsuariosService : IUsuariosService
     {
         return await _repository.ValidarCredenciales(usuario, contrasena);
     }
+
+    public async Task<bool> CambiarContrasena(int idUsuario, string nuevaContrasena)
+    {
+        return await _repository.ActualizarContrasena(
+            idUsuario,
+            nuevaContrasena,
+            estado: "Activo",
+            requiereCambioContrasena: false
+        );
+    }
 }
