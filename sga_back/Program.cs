@@ -1,5 +1,6 @@
+﻿
 
-
+using sga_back.Auth;
 using sga_back.Configurations;
 
 string environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
@@ -13,12 +14,12 @@ IConfigurationRoot configuration = new ConfigurationBuilder()
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Configuraci�n de Logs
+// Configuración de Logs
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 
-// Puedes tener diferentes configuraciones seg�n el entorno
+// Puedes tener diferentes configuraciones según el entorno
 if (builder.Environment.IsDevelopment())
 {
     builder.Logging.AddDebug();
@@ -62,7 +63,11 @@ logger.LogInformation("Aplicacion Iniciada Correctamente");
 app.UseHttpsRedirection();
 app.UseHandlingMiddleware();
 app.UseCors("AllowFrontend");
-app.UseAuthorization();
+
+app.UseAuthentication();   // 🟢 Verifica que el token JWT sea válido
+app.UseMiddleware<ForzarCambioContrasenaMiddleware>(); // 🟠 Bloquea el acceso según el flag
+app.UseAuthorization();    // 🔵 Maneja las políticas de autorización
+
 app.MapControllers();
 
 app.Run();
