@@ -45,10 +45,18 @@ public class UsuariosRepository : IUsuariosRepository
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             usuario.FechaCreacion = DateTime.UtcNow;
-            int id = await _conexion.ExecuteScalarAsync<int>(queryInsertar, usuario);
-            _logger.LogInformation("Usuario insertado con ID: {IdUsuario}", id);
+            int idUsuario = await _conexion.ExecuteScalarAsync<int>(queryInsertar, usuario);
 
-            return id;
+            // 🔹 Asignar el rol "CambioContrasena" automáticamente
+            string queryInsertarRol = @"
+            INSERT INTO Usuario_Roles (id_usuario, id_rol)
+            VALUES (@IdUsuario, 6)"; // ID del Rol "CambioContrasena"
+
+            await _conexion.ExecuteAsync(queryInsertarRol, new { IdUsuario = idUsuario });
+
+            _logger.LogInformation("Usuario insertado con ID: {IdUsuario}", idUsuario);
+
+            return idUsuario;
         }
         catch (ReglasdeNegocioException)
         {
@@ -159,23 +167,44 @@ public class UsuariosRepository : IUsuariosRepository
 
     public async Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena)
     {
-        string query = @"
-        UPDATE Usuarios
-        SET contrasena_hash = @hashContrasena,
-            estado = @Estado,
-            requiere_cambio_contrasena = @RequiereCambio
-        WHERE id_usuario = @IdUsuario";
-
-        string hashContrasena = _passwordHasher.HashPassword(null, nuevaContrasena);
-
-        int filasAfectadas = await _conexion.ExecuteAsync(query, new
+        try
         {
-            IdUsuario = idUsuario,
-            ContrasenaHash = hashContrasena,
-            Estado = estado,
-            RequiereCambio = requiereCambioContrasena
-        });
+            // 🔒 Hashear la nueva contraseña
+            string hashContrasena = _passwordHasher.HashPassword(null, nuevaContrasena);
 
-        return filasAfectadas > 0;
+            string query = @"
+            UPDATE Usuarios
+            SET contrasena_hash = @ContrasenaHash,
+                estado = @Estado,
+                requiere_cambio_contrasena = @RequiereCambio
+            WHERE id_usuario = @IdUsuario";
+
+            int filasAfectadas = await _conexion.ExecuteAsync(query, new
+            {
+                IdUsuario = idUsuario,
+                ContrasenaHash = hashContrasena,
+                Estado = estado,
+                RequiereCambio = requiereCambioContrasena
+            });
+
+            if (filasAfectadas == 0)
+            {
+                _logger.LogWarning("No se encontró el usuario con ID: {IdUsuario} para actualizar la contraseña.", idUsuario);
+                throw new ReglasdeNegocioException("No se encontró el usuario con ID: {IdUsuario} para actualizar la contraseña.");
+            }
+
+            _logger.LogInformation("Contraseña del usuario con ID: {IdUsuario} actualizada exitosamente.", idUsuario);
+            return true;
+
+        }
+        catch (ReglasdeNegocioException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al insertar usuario");
+            throw new RepositoryException("Ocurrió un error al intentar insertar el usuario.", ex);
+        }
     }
 }

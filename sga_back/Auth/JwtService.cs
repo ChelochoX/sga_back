@@ -7,12 +7,17 @@ namespace sga_back.Auth;
 
 public class JwtService
 {
-    private const string SecretKey = "ClaveSecretaSuperSegura123!";  // 🔒 Usa una clave segura en producción
     private readonly SymmetricSecurityKey _key;
 
-    public JwtService()
+    public JwtService(IConfiguration configuration)
     {
-        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SecretKey));
+        var secretKey = configuration["Jwt:Key"];
+        if (string.IsNullOrEmpty(secretKey))
+        {
+            throw new ArgumentException("La clave JWT no está configurada en el appsettings.json.");
+        }
+
+        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
     }
 
     public string GenerarToken(int idUsuario, int idRol, string nombreUsuario, bool requiereCambioContrasena)

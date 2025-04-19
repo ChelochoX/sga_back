@@ -12,8 +12,17 @@ public class ForzarCambioContrasenaMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var requiereCambio = context.User?.FindFirst("requiere_cambio_contrasena")?.Value;
+        var path = context.Request.Path.Value.ToLower();
 
-        if (requiereCambio == "True" && context.Request.Path != "/api/Auth/cambiar-contrasena")
+        // 🔹 Permitir que todos accedan a cambiar contraseña
+        if (path == "/api/auth/cambiar-contrasena")
+        {
+            await _next(context);
+            return;
+        }
+
+        // 🔹 Si requiere cambiar la contraseña, bloquear otros endpoints
+        if (requiereCambio == "True")
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             await context.Response.WriteAsync("Debes cambiar tu contraseña antes de continuar.");

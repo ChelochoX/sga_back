@@ -31,7 +31,6 @@ builder.Services.AddServices();
 builder.Services.AddControllers();
 builder.Services.AddConfiguration(configuration);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -65,7 +64,7 @@ app.UseHandlingMiddleware();
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();   // 🟢 Verifica que el token JWT sea válido
-app.UseMiddleware<ForzarCambioContrasenaMiddleware>(); // 🟠 Bloquea el acceso según el flag
+app.UseMiddleware<ForzarCambioContrasenaMiddleware>(); // 🟠 Middleware para forzar cambio de contraseña
 app.UseAuthorization();    // 🔵 Maneja las políticas de autorización
 
 app.MapControllers();
