@@ -8,13 +8,18 @@ namespace sga_back.Auth;
 public class JwtService
 {
     private readonly SymmetricSecurityKey _key;
+    private readonly string _issuer;
+    private readonly string _audience;
 
     public JwtService(IConfiguration configuration)
     {
         var secretKey = configuration["Jwt:Key"];
-        if (string.IsNullOrEmpty(secretKey))
+        _issuer = configuration["Jwt:Issuer"];
+        _audience = configuration["Jwt:Audience"];
+
+        if (string.IsNullOrEmpty(secretKey) || string.IsNullOrEmpty(_issuer) || string.IsNullOrEmpty(_audience))
         {
-            throw new ArgumentException("La clave JWT no está configurada en el appsettings.json.");
+            throw new ArgumentException("Faltan configuraciones JWT.");
         }
 
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
@@ -26,17 +31,18 @@ public class JwtService
         {
                 new Claim("id_usuario", idUsuario.ToString()),
                 new Claim("id_rol", idRol.ToString()),
-                new Claim("nombre_usuario", nombreUsuario),
-                new Claim("requiere_cambio_contrasena", requiereCambioContrasena.ToString())
+                new Claim("nombre_usuario", nombreUsuario)
         };
 
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            expires: DateTime.UtcNow.AddHours(3),  // ⏳ Duración del token
-            claims: claims,
-            signingCredentials: creds
-        );
+              issuer: _issuer,
+              audience: _audience,
+              expires: DateTime.UtcNow.AddHours(3),
+              claims: claims,
+              signingCredentials: creds
+          );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

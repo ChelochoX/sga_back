@@ -25,14 +25,35 @@ public class AuthController : ControllerBase
         if (usuario == null)
             return Unauthorized("Credenciales incorrectas.");
 
-        var token = _jwtService.GenerarToken(
-                      usuario.IdUsuario,
-                      usuario.IdRol,
-                      usuario.NombreUsuario,
-                      usuario.RequiereCambioContrasena
-        );
+        // Si el usuario está inactivo pero requiere cambio de contraseña (primer login)
+        if (usuario.Estado == "Inactivo" && usuario.RequiereCambioContrasena)
+        {
+            return Ok(new
+            {
+                RequiereCambioContrasena = true,
+                IdUsuario = usuario.IdUsuario,
+                NombreUsuario = usuario.NombreUsuario,
+                Mensaje = "Es necesario cambiar la contraseña antes de continuar."
+            });
+        }
 
-        return Ok(new { Token = token });
+        // Si el usuario está activo, generamos token
+        if (usuario.Estado == "Activo")
+        {
+            var token = _jwtService.GenerarToken(
+                usuario.IdUsuario,
+                usuario.IdRol,
+                usuario.NombreUsuario,
+                usuario.RequiereCambioContrasena
+            );
+
+            return Ok(new
+            {
+                Token = token,
+            });
+        }
+        // Usuario inactivo sin posibilidad de cambiar contraseña
+        return Unauthorized("Usuario inactivo. Contacta al administrador.");
     }
 
     [HttpPost("cambiar-contrasena")]

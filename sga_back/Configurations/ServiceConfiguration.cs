@@ -38,12 +38,21 @@ public static class ServiceConfiguration
         services.AddAuthentication("Bearer")
             .AddJwtBearer("Bearer", options =>
             {
+                var key = configuration["Jwt:Key"];
+                var issuer = configuration["Jwt:Issuer"];
+                var audience = configuration["Jwt:Audience"];
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"])), // 🔹 Clave desde el appsettings.json
-                    ValidateIssuer = false,  // 🚨 Puedes personalizarlo si deseas un issuer específico
-                    ValidateAudience = false // 🚨 Puedes personalizarlo si deseas una audiencia específica
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+
+                    ValidIssuer = issuer,
+                    ValidAudience = audience
                 };
             });
 

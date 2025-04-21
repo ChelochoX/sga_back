@@ -143,12 +143,20 @@ public class UsuariosRepository : IUsuariosRepository
     public async Task<Usuario?> ValidarCredenciales(string usuario, string contrasena)
     {
         string query = @"
-            SELECT u.id_usuario, u.nombre_usuario, u.contrasena_hash, 
-                   u.requiere_cambio_contrasena, ur.id_rol
+           SELECT 
+                u.id_usuario AS IdUsuario,
+                u.id_persona AS IdPersona,
+                ur.id_rol AS IdRol,
+                u.nombre_usuario AS NombreUsuario,
+                u.contrasena_hash AS ContrasenaHash,
+                u.estado AS Estado,
+                u.fecha_creacion AS FechaCreacion,
+                u.fecha_modificacion AS FechaModificacion,
+                u.contrasena_temporal AS ContrasenaTemporal,
+                u.requiere_cambio_contrasena AS RequiereCambioContrasena
             FROM Usuarios u
             INNER JOIN Usuario_Roles ur ON u.id_usuario = ur.id_usuario
-            WHERE u.nombre_usuario = @NombreUsuario
-              AND u.estado = 'Activo'";
+            WHERE u.nombre_usuario = @NombreUsuario";
 
         var usuarioDb = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { NombreUsuario = usuario });
 

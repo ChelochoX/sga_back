@@ -1,7 +1,4 @@
-﻿
-
-using sga_back.Auth;
-using sga_back.Configurations;
+﻿using sga_back.Configurations;
 
 string environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 
@@ -64,7 +61,6 @@ app.UseHandlingMiddleware();
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();   // 🟢 Verifica que el token JWT sea válido
-app.UseMiddleware<ForzarCambioContrasenaMiddleware>(); // 🟠 Middleware para forzar cambio de contraseña
 app.UseAuthorization();    // 🔵 Maneja las políticas de autorización
 
 app.MapControllers();
