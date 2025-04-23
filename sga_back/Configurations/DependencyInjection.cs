@@ -18,6 +18,7 @@ public static class DependencyInjection
         _ = services.AddScoped<IUsuarioRolesRepository, UsuarioRolesRepository>();
         _ = services.AddScoped<IInscripcionesRepository, InscripcionesRepository>();
         _ = services.AddScoped<IPagosRepository, PagosRepository>();
+        _ = services.AddScoped<IPermisosRepository, PermisosRepository>();
         return services;
     }
 
@@ -31,6 +32,7 @@ public static class DependencyInjection
         _ = services.AddScoped<IUsuarioRolesService, UsuarioRolesService>();
         _ = services.AddScoped<IInscripcionesService, InscripcionesService>();
         _ = services.AddScoped<IPagosService, PagosService>();
+        _ = services.AddScoped<IPermisosService, PermisosService>();
         return services;
     }
 }

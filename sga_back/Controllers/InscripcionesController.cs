@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using sga_back.Middlewares.Filters;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
 
@@ -18,6 +19,7 @@ public class InscripcionesController : ControllerBase
     }
 
     [HttpPost]
+    [PermisoRequerido("Crear", "InscripcionesR")]
     public async Task<IActionResult> Insertar([FromBody] InscripcionRequest request)
     {
         int id = await _service.Insertar(request);
