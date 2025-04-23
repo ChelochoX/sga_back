@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using sga_back.Middlewares.Filters;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
@@ -7,6 +8,7 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class InscripcionesController : ControllerBase
 {
     private readonly IInscripcionesService _service;
@@ -19,7 +21,7 @@ public class InscripcionesController : ControllerBase
     }
 
     [HttpPost]
-    [PermisoRequerido("Crear", "InscripcionesR")]
+    [PermisoRequerido("Crear", "InscripcionesRR")]
     public async Task<IActionResult> Insertar([FromBody] InscripcionRequest request)
     {
         int id = await _service.Insertar(request);
