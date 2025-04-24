@@ -49,7 +49,7 @@ public class AuthController : ControllerBase
 
             return Ok(new
             {
-                Token = token,
+                parTokens = new { bearerToken = token }
             });
         }
         // Usuario inactivo sin posibilidad de cambiar contraseña
