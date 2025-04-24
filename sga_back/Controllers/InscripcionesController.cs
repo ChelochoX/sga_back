@@ -21,7 +21,7 @@ public class InscripcionesController : ControllerBase
     }
 
     [HttpPost]
-    [PermisoRequerido("Crear", "InscripcionesRR")]
+    [PermisoRequerido("Crear", "Inscripciones")]
     public async Task<IActionResult> Insertar([FromBody] InscripcionRequest request)
     {
         int id = await _service.Insertar(request);
