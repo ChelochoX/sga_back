@@ -160,17 +160,17 @@ public class UsuariosRepository : IUsuariosRepository
 
         var usuarioDb = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { NombreUsuario = usuario });
 
-        if (usuarioDb == null) return null; // Usuario no encontrado
+        if (usuarioDb == null)
+            return null;
 
-        // 🔐 Verificación del hash de la contraseña
+        // Si no se requiere validar contraseña (por ejemplo, al cambiar contraseña)
+        if (string.IsNullOrEmpty(contrasena))
+            return usuarioDb;
+
+        // Validar la contraseña si fue proporcionada
         var resultado = _passwordHasher.VerifyHashedPassword(null, usuarioDb.ContrasenaHash, contrasena);
 
-        if (resultado == PasswordVerificationResult.Success)
-        {
-            return usuarioDb;
-        }
-
-        return null; // Contraseña incorrecta
+        return resultado == PasswordVerificationResult.Success ? usuarioDb : null;
     }
 
     public async Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena)
