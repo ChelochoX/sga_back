@@ -62,7 +62,15 @@ public class AuthController : ControllerBase
         if (request.NuevaContrasena != request.ConfirmarContrasena)
             return BadRequest("Las contraseñas no coinciden.");
 
-        var resultado = await _service.CambiarContrasena(request.IdUsuario, request.NuevaContrasena);
+        //obtenemos el usuario id
+        var usuario = await _service.ValidarCredenciales(request.Usuario, "");
+
+        request.IdUsuario = usuario.IdUsuario;
+
+        if (!request.IdUsuario.HasValue)
+            return BadRequest("No se pudo obtener el ID del usuario.");
+
+        var resultado = await _service.CambiarContrasena(request.IdUsuario.Value, request.NuevaContrasena);
 
         if (!resultado)
             return BadRequest("No se pudo cambiar la contraseña. Verifica tu información.");
