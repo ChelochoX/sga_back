@@ -60,8 +60,8 @@ app.UseHttpsRedirection();
 app.UseHandlingMiddleware();
 app.UseCors("AllowFrontend");
 
-app.UseAuthentication();   // 🟢 Verifica que el token JWT sea válido
-app.UseAuthorization();    // 🔵 Maneja las políticas de autorización
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

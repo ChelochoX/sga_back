@@ -38,4 +38,11 @@ public class PersonasController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet]
+    public async Task<IActionResult> ObtenerPersonas()
+    {
+        var personas = await _service.ObtenerPersonas();
+        return Ok(personas);
+    }
+
 }

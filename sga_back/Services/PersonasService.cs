@@ -119,4 +119,9 @@ public class PersonasService : IPersonasService
 
         return nombreUsuario;
     }
+
+    public async Task<IEnumerable<Persona>> ObtenerPersonas()
+    {
+        return await _repository.ObtenerPersonas();
+    }
 }

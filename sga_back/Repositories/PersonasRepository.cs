@@ -120,4 +120,37 @@ public class PersonasRepository : IPersonasRepository
             throw new RepositoryException("Ocurrió un error al intentar eliminar la persona.", ex);
         }
     }
+
+    public async Task<IEnumerable<Persona>> ObtenerPersonas()
+    {
+        try
+        {
+            _logger.LogInformation("Obteniendo lista de personas...");
+
+            string query = @"
+                SELECT 
+                    id_persona AS IdPersona, 
+                    nombres AS Nombres, 
+                    apellidos AS Apellidos, 
+                    email AS Email,
+                    telefono AS Telefono,
+                    direccion AS Direccion,
+                    fecha_nacimiento AS FechaNacimiento,
+                    fecha_registro AS FechaRegistro,
+                    cedula AS Cedula,
+                    ruc AS Ruc,
+                    digito_verificador AS DigitoVerificador
+                FROM Personas";
+
+            var personas = await _conexion.QueryAsync<Persona>(query);
+            _logger.LogInformation("Se obtuvieron {Count} personas.", personas.AsList().Count);
+
+            return personas;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener la lista de personas");
+            throw new RepositoryException("Ocurrió un error al intentar obtener las personas.", ex);
+        }
+    }
 }
