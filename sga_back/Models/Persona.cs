@@ -8,8 +8,8 @@ public class Persona
     public string Email { get; set; } = string.Empty;
     public string Telefono { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
-    public DateTime FechaNacimiento { get; set; }
-    public DateTime FechaRegistro { get; set; }
+    public DateTime? FechaNacimiento { get; set; }
+    public DateTime? FechaRegistro { get; set; }
     public string Cedula { get; set; } = string.Empty;
     public string Ruc { get; set; } = string.Empty;
     public int DigitoVerificador { get; set; }
