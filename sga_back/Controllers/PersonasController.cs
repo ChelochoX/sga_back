@@ -39,10 +39,18 @@ public class PersonasController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> ObtenerPersonas()
+    public async Task<IActionResult> ObtenerPersonas(string? filtro = null, int pageNumber = 1, int pageSize = 10)
     {
-        var personas = await _service.ObtenerPersonas();
-        return Ok(personas);
+        var (personas, total) = await _service.ObtenerPersonas(filtro, pageNumber, pageSize);
+
+        var response = new
+        {
+            items = personas,
+            total = total
+        };
+
+        return Ok(response);
     }
+
 
 }

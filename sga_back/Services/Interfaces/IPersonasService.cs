@@ -8,5 +8,5 @@ public interface IPersonasService
     Task<int> Insertar(PersonaRequest request);
     Task<int> Actualizar(int id, PersonaRequest request);
     Task<bool> Eliminar(int id);
-    Task<IEnumerable<Persona>> ObtenerPersonas();
+    Task<(IEnumerable<Persona>, int)> ObtenerPersonas(string? filtro, int pageNumber, int pageSize);
 }

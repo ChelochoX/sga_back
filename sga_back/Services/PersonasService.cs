@@ -120,8 +120,8 @@ public class PersonasService : IPersonasService
         return nombreUsuario;
     }
 
-    public async Task<IEnumerable<Persona>> ObtenerPersonas()
+    public async Task<(IEnumerable<Persona>, int)> ObtenerPersonas(string? filtro, int pageNumber, int pageSize)
     {
-        return await _repository.ObtenerPersonas();
+        return await _repository.ObtenerPersonas(filtro, pageNumber, pageSize);
     }
 }

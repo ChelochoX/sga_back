@@ -7,5 +7,5 @@ public interface IPersonasRepository
     Task<int> Insertar(Persona persona);
     Task<int> Actualizar(Persona persona);
     Task<bool> Eliminar(int id);
-    Task<IEnumerable<Persona>> ObtenerPersonas();
+    Task<(IEnumerable<Persona>, int)> ObtenerPersonas(string? filtro, int pageNumber, int pageSize);
 }

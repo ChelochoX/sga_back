@@ -121,31 +121,70 @@ public class PersonasRepository : IPersonasRepository
         }
     }
 
-    public async Task<IEnumerable<Persona>> ObtenerPersonas()
+    public async Task<(IEnumerable<Persona>, int)> ObtenerPersonas(string? filtro, int pageNumber, int pageSize)
     {
         try
         {
             _logger.LogInformation("Obteniendo lista de personas...");
 
+            if (DateTime.TryParseExact(filtro, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime parsedDate))
+            {
+                filtro = parsedDate.ToString("yyyy-MM-dd");
+                _logger.LogInformation("3Filtro convertido a formato de búsqueda: {Filtro}", filtro);
+            }
+
             string query = @"
-                SELECT 
-                    id_persona AS IdPersona, 
-                    nombres AS Nombres, 
-                    apellidos AS Apellidos, 
-                    email AS Email,
-                    telefono AS Telefono,
-                    direccion AS Direccion,
-                    fecha_nacimiento AS FechaNacimiento,
-                    fecha_registro AS FechaRegistro,
-                    cedula AS Cedula,
-                    ruc AS Ruc,
-                    digito_verificador AS DigitoVerificador
-                FROM Personas";
+            SELECT 
+                id_persona AS IdPersona, 
+                nombres AS Nombres, 
+                apellidos AS Apellidos, 
+                email AS Email,
+                telefono AS Telefono,
+                direccion AS Direccion,
+                fecha_nacimiento AS FechaNacimiento,
+                fecha_registro AS FechaRegistro,
+                cedula AS Cedula,
+                ruc AS Ruc,
+                digito_verificador AS DigitoVerificador
+            FROM Personas
+            WHERE (@Filtro IS NULL OR 
+                   nombres LIKE '%' + @Filtro + '%' OR 
+                   apellidos LIKE '%' + @Filtro + '%' OR 
+                   email LIKE '%' + @Filtro + '%' OR 
+                   telefono LIKE '%' + @Filtro + '%' OR 
+                   direccion LIKE '%' + @Filtro + '%' OR
+                   cedula LIKE '%' + @Filtro + '%' OR 
+                   CONVERT(VARCHAR(10), fecha_nacimiento, 120) LIKE '%' + @Filtro + '%' OR
+                   CONVERT(VARCHAR(10), fecha_registro, 120) LIKE '%' + @Filtro + '%')
+            ORDER BY nombres
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
 
-            var personas = await _conexion.QueryAsync<Persona>(query);
-            _logger.LogInformation("Se obtuvieron {Count} personas.", personas.AsList().Count);
+            SELECT COUNT(*) FROM Personas
+            WHERE (@Filtro IS NULL OR 
+                   nombres LIKE '%' + @Filtro + '%' OR 
+                   apellidos LIKE '%' + @Filtro + '%' OR 
+                   email LIKE '%' + @Filtro + '%' OR 
+                   telefono LIKE '%' + @Filtro + '%' OR 
+                   direccion LIKE '%' + @Filtro + '%' OR
+                   cedula LIKE '%' + @Filtro + '%' OR 
+                   CONVERT(VARCHAR(10), fecha_nacimiento, 120) LIKE '%' + @Filtro + '%' OR
+                   CONVERT(VARCHAR(10), fecha_registro, 120) LIKE '%' + @Filtro + '%');";
 
-            return personas;
+            var offset = (pageNumber - 1) * pageSize;
+
+            using (var multi = await _conexion.QueryMultipleAsync(query, new
+            {
+                Filtro = string.IsNullOrEmpty(filtro) ? null : filtro,
+                Offset = offset,
+                PageSize = pageSize
+            }))
+            {
+                var personas = await multi.ReadAsync<Persona>();
+                var total = await multi.ReadSingleAsync<int>();
+
+                _logger.LogInformation("Se obtuvieron {Count} personas.", personas.AsList().Count);
+                return (personas, total);
+            }
         }
         catch (Exception ex)
         {
@@ -153,4 +192,5 @@ public class PersonasRepository : IPersonasRepository
             throw new RepositoryException("Ocurrió un error al intentar obtener las personas.", ex);
         }
     }
+
 }
