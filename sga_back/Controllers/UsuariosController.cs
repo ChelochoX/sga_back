@@ -43,4 +43,13 @@ public class UsuariosController : ControllerBase
         });
     }
 
+    [HttpPut("editar-usuario")]
+    public async Task<IActionResult> EditarUsuario([FromBody] UsuarioNameUpdateRequest request)
+    {
+        await _service.Actualizar(request);
+        return NoContent();
+
+    }
+
+
 }

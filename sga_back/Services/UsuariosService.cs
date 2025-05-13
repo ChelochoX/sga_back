@@ -66,9 +66,6 @@ public class UsuariosService : IUsuariosService
 
     public async Task<(IEnumerable<Usuario>, int)> ObtenerUsuarios(string? filtro, int pageNumber, int pageSize)
     {
-        // Validación del filtro si es necesario
-        await ValidationHelper.ValidarAsync(filtro, _serviceProvider);
-
         _logger.LogInformation("Obteniendo usuarios desde el servicio...");
 
         // Llamada al repositorio para obtener usuarios
@@ -80,5 +77,14 @@ public class UsuariosService : IUsuariosService
         _logger.LogInformation("Se obtuvieron {Count} usuarios", usuariosDto.Count());
 
         return (usuariosDto, total);
+    }
+
+    public async Task Actualizar(UsuarioNameUpdateRequest request)
+    {
+        await ValidationHelper.ValidarAsync(request, _serviceProvider);
+
+        _logger.LogInformation("Editando usuario con ID: {Id}", request.IdUsuario);
+
+        await _repository.Actualizar(request);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
+using sga_back.Request;
 using System.Data;
 
 namespace sga_back.Repositories;
@@ -109,13 +110,13 @@ public class UsuariosRepository : IUsuariosRepository
             string hashContrasena = _passwordHasher.HashPassword(null, nuevaContrasena);
 
             string query = @"
-            UPDATE Usuarios
-            SET nombre_usuario = @NombreUsuario, 
-                contrasena_hash = @ContrasenaHash, 
-                estado = 'Activo', 
-                fecha_modificacion = GETDATE()
-                requiere_cambio_contrasena = 0
-            WHERE id_usuario = @IdUsuario";
+                    UPDATE Usuarios
+                    SET nombre_usuario = @NombreUsuario, 
+                        contrasena_hash = @ContrasenaHash, 
+                        estado = 'Activo', 
+                        fecha_modificacion = GETDATE()
+                        requiere_cambio_contrasena = 0
+                    WHERE id_usuario = @IdUsuario";
 
             int filasAfectadas = await _conexion.ExecuteAsync(query, new
             {
@@ -277,5 +278,25 @@ public class UsuariosRepository : IUsuariosRepository
             throw new RepositoryException("Ocurrió un error al intentar obtener los usuarios.", ex);
         }
     }
+
+    public async Task Actualizar(UsuarioNameUpdateRequest request)
+    {
+        string query = @"
+        UPDATE Usuarios
+        SET 
+            nombre_usuario = @NombreUsuario,
+            estado = @Estado,
+            fecha_modificacion = @FechaModificacion
+        WHERE id_usuario = @IdUsuario";
+
+        await _conexion.ExecuteAsync(query, new
+        {
+            request.NombreUsuario,
+            request.Estado,
+            request.FechaModificacion,
+            request.IdUsuario
+        });
+    }
+
 
 }

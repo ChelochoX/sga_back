@@ -1,4 +1,5 @@
 ﻿using sga_back.Models;
+using sga_back.Request;
 
 namespace sga_back.Repositories.Interfaces;
 
@@ -11,4 +12,5 @@ public interface IUsuariosRepository
     Task<Usuario?> ValidarCredenciales(string usuario, string contrasena);
     Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena);
     Task<(IEnumerable<Usuario>, int)> ObtenerUsuarios(string? filtro, int pageNumber, int pageSize);
+    Task Actualizar(UsuarioNameUpdateRequest request);
 }
