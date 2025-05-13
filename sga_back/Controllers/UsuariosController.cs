@@ -48,7 +48,6 @@ public class UsuariosController : ControllerBase
     {
         await _service.Actualizar(request);
         return NoContent();
-
     }
 
 
