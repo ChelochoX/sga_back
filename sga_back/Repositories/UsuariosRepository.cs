@@ -215,4 +215,67 @@ public class UsuariosRepository : IUsuariosRepository
             throw new RepositoryException("Ocurrió un error al intentar insertar el usuario.", ex);
         }
     }
+
+    public async Task<(IEnumerable<Usuario>, int)> ObtenerUsuarios(string? filtro, int pageNumber, int pageSize)
+    {
+        try
+        {
+            _logger.LogInformation("Obteniendo lista de usuarios...");
+
+            // Convertir el filtro a formato adecuado si es una fecha
+            if (DateTime.TryParseExact(filtro, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime parsedDate))
+            {
+                filtro = parsedDate.ToString("yyyy-MM-dd");
+                _logger.LogInformation("Filtro convertido a formato de búsqueda: {Filtro}", filtro);
+            }
+
+            // Query para obtener usuarios con paginación y filtrado
+            string query = @"
+                        SELECT 
+                            id_usuario AS IdUsuario,
+                            nombre_usuario AS NombreUsuario,
+                            estado AS Estado,
+                            fecha_creacion AS FechaCreacion,
+                            fecha_modificacion AS FechaModificacion,
+                            requiere_cambio_contrasena AS RequiereCambioContrasena
+                        FROM Usuarios
+                        WHERE (@Filtro IS NULL OR 
+                            nombre_usuario LIKE '%' + @Filtro + '%' OR 
+                            estado LIKE '%' + @Filtro + '%' OR
+                            CONVERT(VARCHAR(10), fecha_creacion, 120) LIKE '%' + @Filtro + '%' OR
+                            CONVERT(VARCHAR(10), fecha_modificacion, 120) LIKE '%' + @Filtro + '%')
+                        ORDER BY nombre_usuario
+                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+
+                        SELECT COUNT(*) FROM Usuarios
+                        WHERE (@Filtro IS NULL OR 
+                            nombre_usuario LIKE '%' + @Filtro + '%' OR 
+                            estado LIKE '%' + @Filtro + '%' OR
+                            CONVERT(VARCHAR(10), fecha_creacion, 120) LIKE '%' + @Filtro + '%' OR
+                            CONVERT(VARCHAR(10), fecha_modificacion, 120) LIKE '%' + @Filtro + '%')";
+
+            var offset = (pageNumber - 1) * pageSize;
+
+            // Ejecutamos la consulta utilizando Dapper
+            using (var multi = await _conexion.QueryMultipleAsync(query, new
+            {
+                Filtro = string.IsNullOrEmpty(filtro) ? null : filtro,
+                Offset = offset,
+                PageSize = pageSize
+            }))
+            {
+                var usuarios = await multi.ReadAsync<Usuario>();
+                var total = await multi.ReadSingleAsync<int>();
+
+                _logger.LogInformation("Se obtuvieron {Count} usuarios.", usuarios.AsList().Count);
+                return (usuarios, total);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener la lista de usuarios");
+            throw new RepositoryException("Ocurrió un error al intentar obtener los usuarios.", ex);
+        }
+    }
+
 }

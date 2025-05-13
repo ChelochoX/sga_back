@@ -63,4 +63,22 @@ public class UsuariosService : IUsuariosService
             requiereCambioContrasena: false
         );
     }
+
+    public async Task<(IEnumerable<Usuario>, int)> ObtenerUsuarios(string? filtro, int pageNumber, int pageSize)
+    {
+        // Validación del filtro si es necesario
+        await ValidationHelper.ValidarAsync(filtro, _serviceProvider);
+
+        _logger.LogInformation("Obteniendo usuarios desde el servicio...");
+
+        // Llamada al repositorio para obtener usuarios
+        var (usuarios, total) = await _repository.ObtenerUsuarios(filtro, pageNumber, pageSize);
+
+        // Mapeo de la entidad Usuario a UsuarioDto
+        var usuariosDto = _mapper.Map<IEnumerable<Usuario>>(usuarios);
+
+        _logger.LogInformation("Se obtuvieron {Count} usuarios", usuariosDto.Count());
+
+        return (usuariosDto, total);
+    }
 }

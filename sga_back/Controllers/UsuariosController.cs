@@ -31,5 +31,16 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("obtener-usuarios")]
+    public async Task<IActionResult> ObtenerUsuarios([FromQuery] string? filtro, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    {
+        var (usuarios, total) = await _service.ObtenerUsuarios(filtro, pageNumber, pageSize);
+
+        return Ok(new
+        {
+            usuarios,
+            total
+        });
+    }
 
 }

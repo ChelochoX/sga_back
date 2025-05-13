@@ -8,6 +8,8 @@ public class UsuarioRequest
     public required string NombreUsuario { get; set; }
     public required string Contrasena { get; set; }
     public string? Estado { get; set; }
+    public DateTime? FechaCreacion { get; set; }
+    public DateTime? FechaModificacion { get; set; }
 }
 public class UsuarioRequestValidator : AbstractValidator<UsuarioRequest>
 {

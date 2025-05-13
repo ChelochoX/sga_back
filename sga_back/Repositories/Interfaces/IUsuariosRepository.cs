@@ -10,4 +10,5 @@ public interface IUsuariosRepository
     Task<bool> ActualizarUsuario(int idUsuario, string nombreUsuario, string nuevaContrasena);
     Task<Usuario?> ValidarCredenciales(string usuario, string contrasena);
     Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena);
+    Task<(IEnumerable<Usuario>, int)> ObtenerUsuarios(string? filtro, int pageNumber, int pageSize);
 }
