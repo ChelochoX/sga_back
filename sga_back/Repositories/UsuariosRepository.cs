@@ -298,5 +298,42 @@ public class UsuariosRepository : IUsuariosRepository
         });
     }
 
+    public async Task<bool> CambiarEstadoUsuario(int idUsuario)
+    {
+        try
+        {
+            _logger.LogInformation("Intentando cambiar el estado del usuario con ID: {IdUsuario}", idUsuario);
+
+            string query = @"
+            UPDATE Usuarios
+            SET 
+                estado = CASE 
+                            WHEN estado = 'Activo' THEN 'Inactivo' 
+                            ELSE 'Activo' 
+                         END,
+                fecha_modificacion = GETDATE()
+            WHERE id_usuario = @IdUsuario";
+
+            int filasAfectadas = await _conexion.ExecuteAsync(query, new
+            {
+                IdUsuario = idUsuario
+            });
+
+            if (filasAfectadas == 0)
+            {
+                _logger.LogWarning("No se encontró el usuario con ID: {IdUsuario} para actualizar.", idUsuario);
+                return false;
+            }
+
+            _logger.LogInformation("Estado del usuario con ID: {IdUsuario} actualizado exitosamente.", idUsuario);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar el estado del usuario con ID: {IdUsuario}", idUsuario);
+            throw new RepositoryException("Ocurrió un error al intentar cambiar el estado del usuario.", ex);
+        }
+    }
+
 
 }

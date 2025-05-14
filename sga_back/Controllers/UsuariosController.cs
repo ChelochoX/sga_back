@@ -50,5 +50,15 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("cambiar-estado/{id}")]
+    public async Task<IActionResult> CambiarEstado(int id)
+    {
+        bool actualizado = await _service.CambiarEstadoUsuario(id);
+        if (!actualizado)
+        {
+            return NotFound(new { mensaje = "Usuario no encontrado." });
+        }
 
+        return NoContent();
+    }
 }

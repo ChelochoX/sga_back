@@ -87,4 +87,9 @@ public class UsuariosService : IUsuariosService
 
         await _repository.Actualizar(request);
     }
+
+    public async Task<bool> CambiarEstadoUsuario(int idUsuario)
+    {
+        return await _repository.CambiarEstadoUsuario(idUsuario);
+    }
 }

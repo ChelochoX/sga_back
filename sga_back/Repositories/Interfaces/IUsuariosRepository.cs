@@ -13,4 +13,5 @@ public interface IUsuariosRepository
     Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena);
     Task<(IEnumerable<Usuario>, int)> ObtenerUsuarios(string? filtro, int pageNumber, int pageSize);
     Task Actualizar(UsuarioNameUpdateRequest request);
+    Task<bool> CambiarEstadoUsuario(int idUsuario);
 }
