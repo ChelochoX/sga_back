@@ -25,7 +25,7 @@ public class JwtService
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
     }
 
-    public string GenerarToken(int idUsuario, int idRol, string nombreUsuario, bool requiereCambioContrasena)
+    public string GenerarToken(int idUsuario, int idRol, string nombreUsuario)
     {
         var claims = new[]
         {

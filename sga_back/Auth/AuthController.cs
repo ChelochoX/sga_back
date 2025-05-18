@@ -23,7 +23,8 @@ public class AuthController : ControllerBase
         var usuario = await _service.ValidarCredenciales(request.Usuario, request.Contrasena);
 
         if (usuario == null)
-            return Unauthorized("Credenciales incorrectas.");
+            return BadRequest(new { message = "Credenciales incorrectas." });
+
 
         // Si el usuario está inactivo pero requiere cambio de contraseña (primer login)
         if (usuario.Estado == "Inactivo" && usuario.RequiereCambioContrasena)
@@ -33,6 +34,7 @@ public class AuthController : ControllerBase
                 RequiereCambioContrasena = true,
                 IdUsuario = usuario.IdUsuario,
                 NombreUsuario = usuario.NombreUsuario,
+                Estado = usuario.Estado,
                 Mensaje = "Es necesario cambiar la contraseña antes de continuar."
             });
         }
@@ -43,8 +45,7 @@ public class AuthController : ControllerBase
             var token = _jwtService.GenerarToken(
                 usuario.IdUsuario,
                 usuario.IdRol,
-                usuario.NombreUsuario,
-                usuario.RequiereCambioContrasena
+                usuario.NombreUsuario
             );
 
             return Ok(new
