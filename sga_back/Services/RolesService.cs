@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using sga_back.Common;
+using sga_back.DTOs;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
 using sga_back.Request;
@@ -26,23 +27,28 @@ public class RolesService : IRolesService
     {
         await ValidationHelper.ValidarAsync(request, _serviceProvider);
 
-        Role role = _mapper.Map<Role>(request);
-        return await _repository.Insertar(role);
+        Rol rol = _mapper.Map<Rol>(request);
+        return await _repository.Insertar(rol);
     }
 
     public async Task<int> Actualizar(int id, RoleRequest request)
     {
         await ValidationHelper.ValidarAsync(request, _serviceProvider);
 
-        Role role = _mapper.Map<Role>(request);
-        role.IdRol = id;
-        return await _repository.Actualizar(role);
+        Rol rol = _mapper.Map<Rol>(request);
+        rol.IdRol = id;
+        return await _repository.Actualizar(rol);
     }
 
     public async Task<bool> Eliminar(int id) => await _repository.Eliminar(id);
 
-    public async Task<IEnumerable<Role>> ObtenerTodos() => await _repository.ObtenerTodos();
+    public async Task<IEnumerable<Rol>> ObtenerTodos() => await _repository.ObtenerTodos();
 
-    public async Task<Role?> ObtenerPorId(int id) => await _repository.ObtenerPorId(id);
+    public async Task<Rol?> ObtenerPorId(int id) => await _repository.ObtenerPorId(id);
+
+    public async Task<IEnumerable<RolDetalleDto>> ObtenerDetalleRolesPorNombreUsuario(string nombreUsuario)
+    {
+        return await _repository.ObtenerDetalleRolesPorNombreUsuario(nombreUsuario);
+    }
 
 }

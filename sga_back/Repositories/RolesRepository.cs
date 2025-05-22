@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -17,19 +18,19 @@ public class RolesRepository : IRolesRepository
         _conexion = conexion;
     }
 
-    public async Task<int> Insertar(Role role)
+    public async Task<int> Insertar(Rol rol)
     {
         try
         {
-            _logger.LogInformation("Intentando insertar rol: {NombreRol}", role.NombreRol);
+            _logger.LogInformation("Intentando insertar rol: {NombreRol}", rol.NombreRol);
 
-            if (await ExisteNombreRol(role.NombreRol))
+            if (await ExisteNombreRol(rol.NombreRol))
             {
                 throw new ReglasdeNegocioException("El nombre del rol ya está registrado.");
             }
 
             string query = "INSERT INTO Roles (nombre_rol) VALUES (@NombreRol); SELECT CAST(SCOPE_IDENTITY() as int);";
-            int id = await _conexion.ExecuteScalarAsync<int>(query, role);
+            int id = await _conexion.ExecuteScalarAsync<int>(query, rol);
 
             _logger.LogInformation("Rol insertado con ID: {IdRol}", id);
             return id;
@@ -41,7 +42,7 @@ public class RolesRepository : IRolesRepository
         }
     }
 
-    public async Task<int> Actualizar(Role role)
+    public async Task<int> Actualizar(Rol role)
     {
         try
         {
@@ -89,16 +90,19 @@ public class RolesRepository : IRolesRepository
         }
     }
 
-    public async Task<Role?> ObtenerPorId(int id)
+    public async Task<Rol?> ObtenerPorId(int id)
     {
         string query = "SELECT * FROM Roles WHERE id_rol = @Id";
-        return await _conexion.QueryFirstOrDefaultAsync<Role>(query, new { Id = id });
+        return await _conexion.QueryFirstOrDefaultAsync<Rol>(query, new { Id = id });
     }
 
-    public async Task<IEnumerable<Role>> ObtenerTodos()
+    public async Task<IEnumerable<Rol>> ObtenerTodos()
     {
-        string query = "SELECT * FROM Roles";
-        return await _conexion.QueryAsync<Role>(query);
+        string query = @"SELECT 
+                        id_rol AS IdRol, 
+                        nombre_rol AS NombreRol 
+                     FROM Roles";
+        return await _conexion.QueryAsync<Rol>(query);
     }
 
     public async Task<bool> ExisteNombreRol(string nombreRol)
@@ -107,5 +111,87 @@ public class RolesRepository : IRolesRepository
         int count = await _conexion.ExecuteScalarAsync<int>(query, new { NombreRol = nombreRol });
         return count > 0;
     }
+
+    public async Task<IEnumerable<RolDetalleDto>> ObtenerDetalleRolesPorNombreUsuario(string nombreUsuario)
+    {
+        try
+        {
+            _logger.LogInformation("Buscando roles para el usuario con nombre similar a: {NombreUsuario}", nombreUsuario);
+
+            string sql = @"
+            SELECT
+                r.id_rol          AS IdRol,
+                r.nombre_rol      AS NombreRol,
+                e.id_entidad      AS IdEntidad,
+                e.nombre_entidad  AS NombreEntidad,
+                re.nombre_recurso AS NombreAccion
+            FROM Usuarios u
+            LEFT JOIN Usuario_Roles ur   ON ur.id_usuario = u.id_usuario
+            LEFT JOIN Roles r            ON r.id_rol      = ur.id_rol
+            LEFT JOIN Permisos p         ON p.id_rol      = r.id_rol
+            LEFT JOIN Recursos re        ON re.id_recurso = p.id_recurso
+            LEFT JOIN Entidades e        ON e.id_entidad  = p.id_entidad
+            WHERE LOWER(u.nombre_usuario) LIKE LOWER(@nombreParam)";
+
+            var nombreParam = $"%{nombreUsuario}%";
+
+            var rows = await _conexion.QueryAsync<RolDetalleTemp>(sql, new { nombreParam });
+            var lookup = new Dictionary<int, RolDetalleDto>();
+
+            foreach (var row in rows)
+            {
+                if (!lookup.TryGetValue(row.IdRol, out var rolDto))
+                {
+                    rolDto = new RolDetalleDto
+                    {
+                        IdRol = row.IdRol,
+                        NombreRol = row.NombreRol
+                    };
+                    lookup[row.IdRol] = rolDto;
+                }
+
+                var entidad = rolDto.Entidades.FirstOrDefault(e => e.IdEntidad == row.IdEntidad);
+
+                if (entidad == null && row.IdEntidad.HasValue)
+                {
+                    entidad = new EntidadDetalleDto
+                    {
+                        IdEntidad = row.IdEntidad.Value,
+                        NombreEntidad = row.NombreEntidad
+                    };
+                    rolDto.Entidades.Add(entidad);
+                }
+
+                if (!string.IsNullOrWhiteSpace(row.NombreAccion) &&
+                    entidad != null &&
+                    !entidad.Acciones.Contains(row.NombreAccion))
+                {
+                    entidad.Acciones.Add(row.NombreAccion);
+                }
+            }
+
+            _logger.LogInformation("Se obtuvieron {Count} roles con permisos para el usuario.", lookup.Count);
+            return lookup.Values;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener el detalle de roles del usuario: {NombreUsuario}", nombreUsuario);
+            throw new RepositoryException("Ocurrió un error al intentar obtener los roles del usuario.", ex);
+        }
+    }
+
+
+
+
+    // clase interna temporal para mapear columnas crudas
+    private record RolDetalleTemp
+    (
+        int IdRol,
+        string NombreRol,
+        int? IdEntidad,
+        string NombreEntidad,
+        string NombreAccion
+    );
+
 }
 

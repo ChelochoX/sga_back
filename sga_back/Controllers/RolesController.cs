@@ -39,14 +39,24 @@ public class RolesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> ObtenerPorId(int id)
     {
-        var role = await _service.ObtenerPorId(id);
-        return role != null ? Ok(role) : NotFound();
+        var rol = await _service.ObtenerPorId(id);
+        return rol != null ? Ok(rol) : NotFound();
     }
 
-    [HttpGet]
+    [HttpGet("obtener-todos")]
     public async Task<IActionResult> ObtenerTodos()
     {
         var roles = await _service.ObtenerTodos();
         return Ok(roles);
+    }
+
+    [HttpGet("usuarios/detalle-roles")]
+    public async Task<IActionResult> GetDetalleRoles([FromQuery] string nombreUsuario)
+    {
+        if (string.IsNullOrWhiteSpace(nombreUsuario))
+            return BadRequest("El nombre de usuario es obligatorio.");
+
+        var data = await _service.ObtenerDetalleRolesPorNombreUsuario(nombreUsuario);
+        return Ok(data);
     }
 }

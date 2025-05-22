@@ -8,7 +8,7 @@ public class RolesAutomapping : Profile
 {
     public RolesAutomapping()
     {
-        _ = CreateMap<RoleRequest, Role>();
+        _ = CreateMap<RoleRequest, Rol>();
 
     }
 }
