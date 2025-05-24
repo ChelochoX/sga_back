@@ -1,9 +1,7 @@
 ﻿using AutoMapper;
-using sga_back.Common;
 using sga_back.DTOs;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
-using sga_back.Request;
 using sga_back.Services.Interfaces;
 
 namespace sga_back.Services;
@@ -23,25 +21,6 @@ public class RolesService : IRolesService
         _serviceProvider = serviceProvider;
     }
 
-    public async Task<int> Insertar(RoleRequest request)
-    {
-        await ValidationHelper.ValidarAsync(request, _serviceProvider);
-
-        Rol rol = _mapper.Map<Rol>(request);
-        return await _repository.Insertar(rol);
-    }
-
-    public async Task<int> Actualizar(int id, RoleRequest request)
-    {
-        await ValidationHelper.ValidarAsync(request, _serviceProvider);
-
-        Rol rol = _mapper.Map<Rol>(request);
-        rol.IdRol = id;
-        return await _repository.Actualizar(rol);
-    }
-
-    public async Task<bool> Eliminar(int id) => await _repository.Eliminar(id);
-
     public async Task<IEnumerable<Rol>> ObtenerTodos() => await _repository.ObtenerTodos();
 
     public async Task<Rol?> ObtenerPorId(int id) => await _repository.ObtenerPorId(id);
@@ -51,4 +30,30 @@ public class RolesService : IRolesService
         return await _repository.ObtenerDetalleRolesPorNombreUsuario(nombreUsuario);
     }
 
+    public async Task ActualizarRolesUsuario(string nombreUsuario, IEnumerable<int> nuevosIdsRoles)
+    {
+        try
+        {
+            var rolesActuales = (await _repository.ObtenerIdsRolesPorUsuario(nombreUsuario)).ToList();
+            var rolesAAsignar = nuevosIdsRoles.Except(rolesActuales);
+            var rolesARemover = rolesActuales.Except(nuevosIdsRoles);
+
+            foreach (var idRol in rolesAAsignar)
+            {
+                await _repository.AsignarRolAUsuario(nombreUsuario, idRol);
+            }
+
+            foreach (var idRol in rolesARemover)
+            {
+                await _repository.RemoverRolDeUsuario(nombreUsuario, idRol);
+            }
+
+            _logger.LogInformation("Roles actualizados para el usuario {NombreUsuario}", nombreUsuario);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar roles para el usuario {NombreUsuario}", nombreUsuario);
+            throw;
+        }
+    }
 }

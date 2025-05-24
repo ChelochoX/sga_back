@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using sga_back.Request;
+using sga_back.DTOs;
 using sga_back.Services.Interfaces;
 
 namespace sga_back.Controllers;
@@ -15,26 +15,6 @@ public class RolesController : ControllerBase
         _service = service;
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Insertar([FromBody] RoleRequest request)
-    {
-        int id = await _service.Insertar(request);
-        return Ok(id);
-    }
-
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Actualizar(int id, [FromBody] RoleRequest request)
-    {
-        await _service.Actualizar(id, request);
-        return NoContent();
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Eliminar(int id)
-    {
-        await _service.Eliminar(id);
-        return NoContent();
-    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> ObtenerPorId(int id)
@@ -50,6 +30,7 @@ public class RolesController : ControllerBase
         return Ok(roles);
     }
 
+
     [HttpGet("usuarios/detalle-roles")]
     public async Task<IActionResult> GetDetalleRoles([FromQuery] string nombreUsuario)
     {
@@ -59,4 +40,18 @@ public class RolesController : ControllerBase
         var data = await _service.ObtenerDetalleRolesPorNombreUsuario(nombreUsuario);
         return Ok(data);
     }
+
+
+    [HttpPost("actualizar-roles")]
+    public async Task<IActionResult> ActualizarRoles([FromBody] ActualizarRolesRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NombreUsuario))
+        {
+            return BadRequest("El nombre de usuario es obligatorio.");
+        }
+
+        await _service.ActualizarRolesUsuario(request.NombreUsuario, request.IdsRoles);
+        return Ok("Roles actualizados correctamente.");
+    }
+
 }

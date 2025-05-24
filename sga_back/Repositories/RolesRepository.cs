@@ -18,78 +18,6 @@ public class RolesRepository : IRolesRepository
         _conexion = conexion;
     }
 
-    public async Task<int> Insertar(Rol rol)
-    {
-        try
-        {
-            _logger.LogInformation("Intentando insertar rol: {NombreRol}", rol.NombreRol);
-
-            if (await ExisteNombreRol(rol.NombreRol))
-            {
-                throw new ReglasdeNegocioException("El nombre del rol ya está registrado.");
-            }
-
-            string query = "INSERT INTO Roles (nombre_rol) VALUES (@NombreRol); SELECT CAST(SCOPE_IDENTITY() as int);";
-            int id = await _conexion.ExecuteScalarAsync<int>(query, rol);
-
-            _logger.LogInformation("Rol insertado con ID: {IdRol}", id);
-            return id;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al insertar rol.");
-            throw new RepositoryException("Ocurrió un error al intentar insertar el rol.", ex);
-        }
-    }
-
-    public async Task<int> Actualizar(Rol role)
-    {
-        try
-        {
-            _logger.LogInformation("Intentando actualizar rol con ID: {IdRol}", role.IdRol);
-
-            string query = "UPDATE Roles SET nombre_rol = @NombreRol WHERE id_rol = @IdRol";
-            int filasAfectadas = await _conexion.ExecuteAsync(query, role);
-
-            if (filasAfectadas == 0)
-            {
-                throw new NoDataFoundException("No se encontró el rol para actualizar.");
-            }
-
-            _logger.LogInformation("Rol con ID: {IdRol} actualizado exitosamente.", role.IdRol);
-            return filasAfectadas;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al actualizar rol con ID: {IdRol}", role.IdRol);
-            throw new RepositoryException("Ocurrió un error al intentar actualizar el rol.", ex);
-        }
-    }
-
-    public async Task<bool> Eliminar(int id)
-    {
-        try
-        {
-            _logger.LogInformation("Intentando eliminar rol con ID: {IdRol}", id);
-
-            string query = "DELETE FROM Roles WHERE id_rol = @Id";
-            int filasAfectadas = await _conexion.ExecuteAsync(query, new { Id = id });
-
-            if (filasAfectadas == 0)
-            {
-                throw new NoDataFoundException("No se encontró el rol para eliminar.");
-            }
-
-            _logger.LogInformation("Rol con ID: {IdRol} eliminado exitosamente.", id);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al eliminar rol con ID: {IdRol}", id);
-            throw new RepositoryException("Ocurrió un error al intentar eliminar el rol.", ex);
-        }
-    }
-
     public async Task<Rol?> ObtenerPorId(int id)
     {
         string query = "SELECT * FROM Roles WHERE id_rol = @Id";
@@ -124,7 +52,8 @@ public class RolesRepository : IRolesRepository
                 r.nombre_rol      AS NombreRol,
                 e.id_entidad      AS IdEntidad,
                 e.nombre_entidad  AS NombreEntidad,
-                re.nombre_recurso AS NombreAccion
+                re.nombre_recurso AS NombreAccion,
+                u.nombre_usuario As NombreUsuario
             FROM Usuarios u
             LEFT JOIN Usuario_Roles ur   ON ur.id_usuario = u.id_usuario
             LEFT JOIN Roles r            ON r.id_rol      = ur.id_rol
@@ -145,7 +74,8 @@ public class RolesRepository : IRolesRepository
                     rolDto = new RolDetalleDto
                     {
                         IdRol = row.IdRol,
-                        NombreRol = row.NombreRol
+                        NombreRol = row.NombreRol,
+                        NombreUsuario = row.NombreUsuario
                     };
                     lookup[row.IdRol] = rolDto;
                 }
@@ -180,9 +110,6 @@ public class RolesRepository : IRolesRepository
         }
     }
 
-
-
-
     // clase interna temporal para mapear columnas crudas
     private record RolDetalleTemp
     (
@@ -190,8 +117,71 @@ public class RolesRepository : IRolesRepository
         string NombreRol,
         int? IdEntidad,
         string NombreEntidad,
-        string NombreAccion
+        string NombreAccion,
+        string NombreUsuario
     );
+
+    public async Task<IEnumerable<int>> ObtenerIdsRolesPorUsuario(string nombreUsuario)
+    {
+        try
+        {
+            string sql = @"
+                SELECT r.id_rol
+                FROM Usuarios u
+                INNER JOIN Usuario_Roles ur ON u.id_usuario = ur.id_usuario
+                INNER JOIN Roles r ON ur.id_rol = r.id_rol
+                WHERE u.nombre_usuario = @nombreUsuario";
+
+            return await _conexion.QueryAsync<int>(sql, new { nombreUsuario });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener roles del usuario {NombreUsuario}", nombreUsuario);
+            throw new RepositoryException($"No se pudieron obtener los roles del usuario {nombreUsuario}", ex);
+        }
+    }
+
+    public async Task AsignarRolAUsuario(string nombreUsuario, int idRol)
+    {
+        try
+        {
+            string sql = @"
+                INSERT INTO Usuario_Roles (id_usuario, id_rol)
+                SELECT u.id_usuario, @idRol
+                FROM Usuarios u
+                WHERE u.nombre_usuario = @nombreUsuario
+                AND NOT EXISTS (
+                    SELECT 1 FROM Usuario_Roles ur
+                    WHERE ur.id_usuario = u.id_usuario AND ur.id_rol = @idRol
+                )";
+
+            await _conexion.ExecuteAsync(sql, new { nombreUsuario, idRol });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al asignar el rol {IdRol} al usuario {NombreUsuario}", idRol, nombreUsuario);
+            throw new RepositoryException($"No se pudo asignar el rol {idRol} al usuario {nombreUsuario}", ex);
+        }
+    }
+
+    public async Task RemoverRolDeUsuario(string nombreUsuario, int idRol)
+    {
+        try
+        {
+            string sql = @"
+                DELETE ur
+                FROM Usuario_Roles ur
+                INNER JOIN Usuarios u ON ur.id_usuario = u.id_usuario
+                WHERE u.nombre_usuario = @nombreUsuario AND ur.id_rol = @idRol";
+
+            await _conexion.ExecuteAsync(sql, new { nombreUsuario, idRol });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al remover el rol {IdRol} del usuario {NombreUsuario}", idRol, nombreUsuario);
+            throw new RepositoryException($"No se pudo remover el rol {idRol} del usuario {nombreUsuario}", ex);
+        }
+    }
 
 }
 

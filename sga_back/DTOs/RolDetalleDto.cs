@@ -4,6 +4,7 @@ public class RolDetalleDto
 {
     public int IdRol { get; set; }
     public string NombreRol { get; set; } = "";
+    public string NombreUsuario { get; set; }
     public List<EntidadDetalleDto> Entidades { get; set; } = new();
 }
 
