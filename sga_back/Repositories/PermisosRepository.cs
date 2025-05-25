@@ -76,46 +76,65 @@ public class PermisosRepository : IPermisosRepository
     {
         try
         {
-            var sql = @"
-                SELECT 
-                    e.id_entidad AS IdEntidad, 
-                    e.nombre_entidad AS NombreEntidad,
-                    r.id_recurso AS IdRecurso, 
-                    r.nombre_recurso AS NombreRecurso
-                FROM Entidades e
-                LEFT JOIN Permisos p ON e.id_entidad = p.id_entidad
-                LEFT JOIN Recursos r ON p.id_recurso = r.id_recurso
-                ORDER BY e.nombre_entidad, r.nombre_recurso";
+            _logger.LogInformation("Actualizando la tabla intermedia Entidad_Recurso con todas las combinaciones posibles.");
 
-            var entidadDiccionario = new Dictionary<int, EntidadConRecursosDto>();
+            string insertarSql = @"
+            INSERT INTO Entidad_Recurso (id_entidad, id_recurso)
+            SELECT e.id_entidad, r.id_recurso
+            FROM Entidades e
+            CROSS JOIN Recursos r
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM Entidad_Recurso er
+                WHERE er.id_entidad = e.id_entidad AND er.id_recurso = r.id_recurso
+            );";
 
-            var resultado = await _conexion.QueryAsync<EntidadConRecursosDto, RecursoDto, EntidadConRecursosDto>(
-                sql,
-                (entidad, recurso) =>
+            await _conexion.ExecuteAsync(insertarSql);
+
+            _logger.LogInformation("Tabla intermedia actualizada correctamente.");
+
+            string consultaSql = @"
+            SELECT 
+                e.id_entidad AS IdEntidad,
+                e.nombre_entidad AS NombreEntidad,
+                r.id_recurso AS IdRecurso,
+                r.nombre_recurso AS NombreRecurso
+            FROM Entidades e
+            INNER JOIN Entidad_Recurso er ON e.id_entidad = er.id_entidad
+            INNER JOIN Recursos r ON er.id_recurso = r.id_recurso
+            ORDER BY e.nombre_entidad, r.nombre_recurso;";
+
+            var resultado = await _conexion.QueryAsync<EntidadRecursoTempDto>(consultaSql);
+
+            var entidadesDict = new Dictionary<int, EntidadConRecursosDto>();
+
+            foreach (var row in resultado)
+            {
+                if (!entidadesDict.TryGetValue(row.IdEntidad, out var entidadDto))
                 {
-                    if (!entidadDiccionario.TryGetValue(entidad.IdEntidad, out var entidadExistente))
+                    entidadDto = new EntidadConRecursosDto
                     {
-                        entidadExistente = entidad;
-                        entidadExistente.Recursos = new List<RecursoDto>();
-                        entidadDiccionario.Add(entidadExistente.IdEntidad, entidadExistente);
-                    }
+                        IdEntidad = row.IdEntidad,
+                        NombreEntidad = row.NombreEntidad,
+                        Recursos = new List<RecursoDto>()
+                    };
+                    entidadesDict.Add(row.IdEntidad, entidadDto);
+                }
 
-                    if (recurso != null && !entidadExistente.Recursos.Any(r => r.IdRecurso == recurso.IdRecurso))
-                    {
-                        entidadExistente.Recursos.Add(recurso);
-                    }
+                entidadDto.Recursos.Add(new RecursoDto
+                {
+                    IdRecurso = row.IdRecurso,
+                    NombreRecurso = row.NombreRecurso
+                });
+            }
 
-                    return entidadExistente;
-                },
-                splitOn: "IdRecurso"); // 👈 Este campo DEBE coincidir con el alias
-
-            return entidadDiccionario.Values;
-
+            _logger.LogInformation("Consulta de entidades con recursos ejecutada correctamente.");
+            return entidadesDict.Values;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener las entidades con sus recursos.");
-            throw new RepositoryException("No se pudieron obtener las entidades con sus recursos.", ex);
+            _logger.LogError(ex, "Error al obtener las entidades con recursos.");
+            throw;
         }
     }
 
@@ -149,4 +168,5 @@ public class PermisosRepository : IPermisosRepository
             throw new RepositoryException($"No se pudo asignar permisos al rol {idRol}.", ex);
         }
     }
+
 }
