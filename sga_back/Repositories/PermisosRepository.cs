@@ -119,7 +119,7 @@ public class PermisosRepository : IPermisosRepository
         }
     }
 
-    public async Task AsignarPermisosARol(int idRol, List<(int idEntidad, int idRecurso)> permisos)
+    public async Task AsignarPermisosARol(int idRol, List<PermisoDto> permisos)
     {
         try
         {
@@ -135,8 +135,8 @@ public class PermisosRepository : IPermisosRepository
             var parametros = permisos.Select(p => new
             {
                 idRol,
-                idRecurso = p.idRecurso,
-                idEntidad = p.idEntidad
+                idRecurso = p.IdRecurso,
+                idEntidad = p.IdEntidad
             });
 
             await _conexion.ExecuteAsync(insertarSql, parametros);
