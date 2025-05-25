@@ -17,20 +17,18 @@ public class PermisosService : IPermisosService
     {
         return await _repository.TienePermiso(idUsuario, entidad, recurso);
     }
-    public async Task<IEnumerable<RolDto>> ObtenerRoles()
-    {
-        return await _repository.ObtenerRoles();
-    }
-    public async Task<IEnumerable<RecursoDto>> ObtenerRecursos()
-    {
-        return await _repository.ObtenerRecursos();
-    }
-    public async Task<IEnumerable<EntidadDto>> ObtenerEntidades()
-    {
-        return await _repository.ObtenerEntidades();
-    }
     public async Task<IEnumerable<PermisoDto>> ObtenerPermisosPorRol(int idRol)
     {
         return await _repository.ObtenerPermisosPorRol(idRol);
+    }
+
+    public async Task<IEnumerable<EntidadConRecursosDto>> ObtenerEntidadesConRecursos()
+    {
+        return await _repository.ObtenerEntidadesConRecursos();
+    }
+
+    public async Task AsignarPermisosARol(int idRol, List<(int idEntidad, int idRecurso)> permisos)
+    {
+        await _repository.AsignarPermisosARol(idRol, permisos);
     }
 }

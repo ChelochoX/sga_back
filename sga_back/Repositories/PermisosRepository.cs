@@ -54,51 +54,6 @@ public class PermisosRepository : IPermisosRepository
         }
     }
 
-    public async Task<IEnumerable<RolDto>> ObtenerRoles()
-    {
-        try
-        {
-            _logger.LogInformation("Obteniendo todos los roles...");
-            string query = "SELECT id_rol AS IdRol, nombre_rol AS NombreRol FROM Roles";
-            return await _conexion.QueryAsync<RolDto>(query);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener roles.");
-            throw new RepositoryException("Error al obtener los roles.", ex);
-        }
-    }
-
-    public async Task<IEnumerable<RecursoDto>> ObtenerRecursos()
-    {
-        try
-        {
-            _logger.LogInformation("Obteniendo todos los recursos...");
-            string query = "SELECT id_recurso AS IdRecurso, nombre_recurso AS NombreRecurso FROM Recursos";
-            return await _conexion.QueryAsync<RecursoDto>(query);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener recursos.");
-            throw new RepositoryException("Error al obtener los recursos.", ex);
-        }
-    }
-
-    public async Task<IEnumerable<EntidadDto>> ObtenerEntidades()
-    {
-        try
-        {
-            _logger.LogInformation("Obteniendo todas las entidades...");
-            string query = "SELECT id_entidad AS IdEntidad, nombre_entidad AS NombreEntidad FROM Entidades";
-            return await _conexion.QueryAsync<EntidadDto>(query);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener entidades.");
-            throw new RepositoryException("Error al obtener las entidades.", ex);
-        }
-    }
-
     public async Task<IEnumerable<PermisoDto>> ObtenerPermisosPorRol(int idRol)
     {
         try
@@ -114,6 +69,79 @@ public class PermisosRepository : IPermisosRepository
         {
             _logger.LogError(ex, "Error al obtener permisos para el rol: {IdRol}", idRol);
             throw new RepositoryException("Error al obtener permisos.", ex);
+        }
+    }
+
+    public async Task<IEnumerable<EntidadConRecursosDto>> ObtenerEntidadesConRecursos()
+    {
+        try
+        {
+            var sql = @"
+            SELECT e.id_entidad, e.nombre_entidad, r.id_recurso, r.nombre_recurso
+            FROM Entidades e
+            LEFT JOIN Permisos p ON e.id_entidad = p.id_entidad
+            LEFT JOIN Recursos r ON p.id_recurso = r.id_recurso
+            ORDER BY e.nombre_entidad, r.nombre_recurso";
+
+            var entidadDiccionario = new Dictionary<int, EntidadConRecursosDto>();
+
+            var resultado = await _conexion.QueryAsync<EntidadConRecursosDto, RecursoDto, EntidadConRecursosDto>(
+                sql,
+                (entidad, recurso) =>
+                {
+                    if (!entidadDiccionario.TryGetValue(entidad.IdEntidad, out var entidadExistente))
+                    {
+                        entidadExistente = entidad;
+                        entidadExistente.Recursos = new List<RecursoDto>();
+                        entidadDiccionario.Add(entidadExistente.IdEntidad, entidadExistente);
+                    }
+
+                    if (recurso != null && !entidadExistente.Recursos.Any(r => r.IdRecurso == recurso.IdRecurso))
+                    {
+                        entidadExistente.Recursos.Add(recurso);
+                    }
+
+                    return entidadExistente;
+                },
+                splitOn: "id_recurso");
+
+            return entidadDiccionario.Values;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener las entidades con sus recursos.");
+            throw new RepositoryException("No se pudieron obtener las entidades con sus recursos.", ex);
+        }
+    }
+
+    public async Task AsignarPermisosARol(int idRol, List<(int idEntidad, int idRecurso)> permisos)
+    {
+        try
+        {
+            // 🔥 Eliminar permisos actuales de ese rol
+            string eliminarSql = "DELETE FROM Permisos WHERE id_rol = @idRol";
+            await _conexion.ExecuteAsync(eliminarSql, new { idRol });
+
+            // 💾 Insertar nuevos permisos para el rol
+            string insertarSql = @"
+            INSERT INTO Permisos (id_rol, id_recurso, id_entidad)
+            VALUES (@idRol, @idRecurso, @idEntidad)";
+
+            var parametros = permisos.Select(p => new
+            {
+                idRol,
+                idRecurso = p.idRecurso,
+                idEntidad = p.idEntidad
+            });
+
+            await _conexion.ExecuteAsync(insertarSql, parametros);
+
+            _logger.LogInformation("Permisos asignados correctamente al rol {IdRol}", idRol);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al asignar permisos al rol {IdRol}", idRol);
+            throw new RepositoryException($"No se pudo asignar permisos al rol {idRol}.", ex);
         }
     }
 }

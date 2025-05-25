@@ -35,10 +35,10 @@ public class RolesService : IRolesService
         try
         {
             var rolesActuales = (await _repository.ObtenerIdsRolesPorUsuario(nombreUsuario)).ToList();
-            var rolesAAsignar = nuevosIdsRoles.Except(rolesActuales);
-            var rolesARemover = rolesActuales.Except(nuevosIdsRoles);
+            var rolesAAsignar = nuevosIdsRoles.Except(rolesActuales).ToList();
+            var rolesARemover = rolesActuales.Except(nuevosIdsRoles).ToList();
 
-            foreach (var idRol in rolesAAsignar)
+            foreach (var idRol in rolesAAsignar.Where(r => r > 0))
             {
                 await _repository.AsignarRolAUsuario(nombreUsuario, idRol);
             }
@@ -56,4 +56,5 @@ public class RolesService : IRolesService
             throw;
         }
     }
+
 }
