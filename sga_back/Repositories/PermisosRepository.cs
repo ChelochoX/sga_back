@@ -77,11 +77,15 @@ public class PermisosRepository : IPermisosRepository
         try
         {
             var sql = @"
-            SELECT e.id_entidad, e.nombre_entidad, r.id_recurso, r.nombre_recurso
-            FROM Entidades e
-            LEFT JOIN Permisos p ON e.id_entidad = p.id_entidad
-            LEFT JOIN Recursos r ON p.id_recurso = r.id_recurso
-            ORDER BY e.nombre_entidad, r.nombre_recurso";
+                SELECT 
+                    e.id_entidad AS IdEntidad, 
+                    e.nombre_entidad AS NombreEntidad,
+                    r.id_recurso AS IdRecurso, 
+                    r.nombre_recurso AS NombreRecurso
+                FROM Entidades e
+                LEFT JOIN Permisos p ON e.id_entidad = p.id_entidad
+                LEFT JOIN Recursos r ON p.id_recurso = r.id_recurso
+                ORDER BY e.nombre_entidad, r.nombre_recurso";
 
             var entidadDiccionario = new Dictionary<int, EntidadConRecursosDto>();
 
@@ -103,9 +107,10 @@ public class PermisosRepository : IPermisosRepository
 
                     return entidadExistente;
                 },
-                splitOn: "id_recurso");
+                splitOn: "IdRecurso"); // 👈 Este campo DEBE coincidir con el alias
 
             return entidadDiccionario.Values;
+
         }
         catch (Exception ex)
         {
