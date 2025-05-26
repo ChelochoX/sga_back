@@ -238,7 +238,9 @@ public class UsuariosRepository : IUsuariosRepository
                             estado AS Estado,
                             fecha_creacion AS FechaCreacion,
                             fecha_modificacion AS FechaModificacion,
-                            requiere_cambio_contrasena AS RequiereCambioContrasena
+                            requiere_cambio_contrasena AS RequiereCambioContrasena,
+                            contrasena_temporal AS ContrasenaTemporal
+
                         FROM Usuarios
                         WHERE (@Filtro IS NULL OR 
                             nombre_usuario LIKE '%' + @Filtro + '%' OR 
