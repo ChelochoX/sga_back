@@ -37,4 +37,12 @@ public class CursosController : ControllerBase
         await _service.Eliminar(id);
         return NoContent();
     }
+
+    [HttpPost("obtener-cursos")]
+    public async Task<IActionResult> ObtenerCursos([FromBody] ObtenerCursosRequest request)
+    {
+        var cursos = await _service.ObtenerCursosPorFecha(request);
+        return Ok(cursos);
+    }
+
 }

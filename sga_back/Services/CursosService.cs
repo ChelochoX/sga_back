@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using sga_back.DTOs;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
 using sga_back.Request;
@@ -13,13 +14,15 @@ public class CursosService : ICursosService
     private readonly IMapper _mapper;
     private readonly ILogger<CursosService> _logger;
     private readonly IValidator<CursoRequest> _validator;
+    private readonly IValidator<ObtenerCursosRequest> _validatorFecha;
 
-    public CursosService(ILogger<CursosService> logger, ICursosRepository repository, IMapper mapper, IValidator<CursoRequest> validator)
+    public CursosService(ILogger<CursosService> logger, ICursosRepository repository, IMapper mapper, IValidator<CursoRequest> validator, IValidator<ObtenerCursosRequest> validatorFecha)
     {
         _logger = logger;
         _repository = repository;
         _mapper = mapper;
         _validator = validator;
+        _validatorFecha = validatorFecha;
     }
 
     public async Task<int> Insertar(CursoRequest request)
@@ -77,5 +80,23 @@ public class CursosService : ICursosService
 
         _logger.LogInformation("Curso con ID: {IdCurso} eliminado exitosamente.", id);
         return eliminado;
+    }
+
+    public async Task<IEnumerable<CursoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request)
+    {
+        // Validación usando FluentValidation
+        FluentValidation.Results.ValidationResult validationResult = await _validatorFecha.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationException(validationResult.Errors);
+        }
+
+        _logger.LogInformation("Llamando a repositorio para obtener cursos por fechas...");
+
+        return await _repository.ObtenerCursosPorFecha(request);
+
+
+
+
     }
 }

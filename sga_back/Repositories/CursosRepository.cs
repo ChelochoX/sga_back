@@ -1,7 +1,9 @@
 ﻿using Dapper;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
+using sga_back.Request;
 using System.Data;
 
 namespace sga_back.Repositories;
@@ -136,4 +138,49 @@ public class CursosRepository : ICursosRepository
             throw new RepositoryException("Ocurrió un error al obtener el curso.", ex);
         }
     }
+
+    public async Task<IEnumerable<CursoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Obteniendo cursos. Fecha de inicio: {FechaInicio}, Fecha fin: {FechaFin}", request.FechaInicio, request.FechaFin);
+
+            string query = @"
+            SELECT 
+                id_curso           AS IdCurso,
+                nombre             AS Nombre,
+                descripcion        AS Descripcion,
+                duracion           AS Duracion,
+                unidad_duracion    AS UnidadDuracion,
+                cantidad_cuota     AS CantidadCuota,
+                monto_cuota        AS MontoCuota,
+                tiene_practica     AS TienePractica,
+                costo_practica     AS CostoPractica,
+                fecha_inicio       AS FechaInicio,
+                fecha_fin          AS FechaFin,
+                monto_matricula    AS MontoMatricula
+            FROM Cursos
+            WHERE 
+                (@FechaInicio IS NULL OR fecha_inicio >= @FechaInicio)
+                AND (@FechaFin IS NULL OR fecha_inicio <= @FechaFin)
+            ORDER BY fecha_inicio DESC
+        ";
+
+            var cursos = await _conexion.QueryAsync<CursoDto>(query, new
+            {
+                FechaInicio = request.FechaInicio,
+                FechaFin = request.FechaFin
+            });
+
+            _logger.LogInformation("Se obtuvieron {Cantidad} cursos.", cursos.Count());
+            return cursos;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener los cursos");
+            throw new RepositoryException("Ocurrió un error al intentar obtener los cursos.", ex);
+        }
+    }
+
+
 }
