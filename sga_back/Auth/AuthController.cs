@@ -22,11 +22,15 @@ public class AuthController : ControllerBase
     {
         var usuario = await _service.ValidarCredenciales(request.Usuario, request.Contrasena);
 
-        if ((string.IsNullOrEmpty(usuario.Estado) || usuario.Estado == "Inactivo") && usuario.RequiereCambioContrasena)
-            return BadRequest(new { message = "Usuario inactivo. Contacta al administrador." });
-
-        if (string.IsNullOrEmpty(usuario.Estado) && !usuario.RequiereCambioContrasena)
+        if (usuario == null)
+        {
             return BadRequest(new { message = "Credenciales incorrectas." });
+        }
+
+        if ((string.IsNullOrEmpty(usuario.Estado) || usuario.Estado == "Inactivo") && usuario.RequiereCambioContrasena)
+        {
+            return BadRequest(new { message = "Usuario inactivo. Contacta al administrador." });
+        }
 
         // Si el usuario está inactivo pero requiere cambio de contraseña (primer login)
         if (usuario.Estado == "Activo" && usuario.RequiereCambioContrasena)

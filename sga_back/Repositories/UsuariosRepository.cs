@@ -143,36 +143,62 @@ public class UsuariosRepository : IUsuariosRepository
 
     public async Task<Usuario?> ValidarCredenciales(string usuario, string contrasena)
     {
-        string query = @"
-           SELECT 
-                u.id_usuario AS IdUsuario,
-                u.id_persona AS IdPersona,
-                ur.id_rol AS IdRol,
-                u.nombre_usuario AS NombreUsuario,
-                u.contrasena_hash AS ContrasenaHash,
-                u.estado AS Estado,
-                u.fecha_creacion AS FechaCreacion,
-                u.fecha_modificacion AS FechaModificacion,
-                u.contrasena_temporal AS ContrasenaTemporal,
-                u.requiere_cambio_contrasena AS RequiereCambioContrasena
-            FROM Usuarios u
-            INNER JOIN Usuario_Roles ur ON u.id_usuario = ur.id_usuario
-            WHERE u.nombre_usuario = @NombreUsuario";
+        try
+        {
+            _logger.LogInformation("Validando credenciales para el usuario: {Usuario}", usuario);
 
-        var usuarioDb = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { NombreUsuario = usuario });
+            string query = @"
+            SELECT 
+                 u.id_usuario AS IdUsuario,
+                 u.id_persona AS IdPersona,
+                 ur.id_rol AS IdRol,
+                 u.nombre_usuario AS NombreUsuario,
+                 u.contrasena_hash AS ContrasenaHash,
+                 u.estado AS Estado,
+                 u.fecha_creacion AS FechaCreacion,
+                 u.fecha_modificacion AS FechaModificacion,
+                 u.contrasena_temporal AS ContrasenaTemporal,
+                 u.requiere_cambio_contrasena AS RequiereCambioContrasena
+             FROM Usuarios u
+             INNER JOIN Usuario_Roles ur ON u.id_usuario = ur.id_usuario
+             WHERE u.nombre_usuario = @NombreUsuario";
 
-        if (usuarioDb == null)
-            return null;
+            var usuarioDb = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { NombreUsuario = usuario });
 
-        // Si no se requiere validar contraseña (por ejemplo, al cambiar contraseña)
-        if (string.IsNullOrEmpty(contrasena))
-            return usuarioDb;
+            if (usuarioDb == null)
+            {
+                _logger.LogWarning("No se encontró usuario con nombre: {Usuario}", usuario);
+                return null;
+            }
 
-        // Validar la contraseña si fue proporcionada
-        var resultado = _passwordHasher.VerifyHashedPassword(null, usuarioDb.ContrasenaHash, contrasena);
+            // Si no se requiere validar contraseña (por ejemplo, al cambiar contraseña)
+            if (string.IsNullOrEmpty(contrasena))
+            {
+                _logger.LogInformation("Contraseña vacía, se retorna usuario solo con datos.");
+                return usuarioDb;
+            }
 
-        return resultado == PasswordVerificationResult.Success ? usuarioDb : null;
+            // Validar la contraseña si fue proporcionada
+            var resultado = _passwordHasher.VerifyHashedPassword(null, usuarioDb.ContrasenaHash, contrasena);
+
+            if (resultado == PasswordVerificationResult.Success)
+            {
+                _logger.LogInformation("Validación de contraseña exitosa para el usuario: {Usuario}", usuario);
+                return usuarioDb;
+            }
+            else
+            {
+                _logger.LogWarning("Contraseña incorrecta para el usuario: {Usuario}", usuario);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al validar credenciales para el usuario: {Usuario}", usuario);
+            throw new RepositoryException("Ocurrió un error al validar las credenciales del usuario.", ex);
+        }
     }
+
 
     public async Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena)
     {
