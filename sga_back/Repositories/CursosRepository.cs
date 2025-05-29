@@ -158,7 +158,8 @@ public class CursosRepository : ICursosRepository
                 costo_practica     AS CostoPractica,
                 fecha_inicio       AS FechaInicio,
                 fecha_fin          AS FechaFin,
-                monto_matricula    AS MontoMatricula
+                monto_matricula    AS MontoMatricula,
+                activo             AS Activo
             FROM Cursos
             WHERE 
                 (@FechaInicio IS NULL OR fecha_inicio >= @FechaInicio)
@@ -179,6 +180,35 @@ public class CursosRepository : ICursosRepository
         {
             _logger.LogError(ex, "Error al obtener los cursos");
             throw new RepositoryException("Ocurrió un error al intentar obtener los cursos.", ex);
+        }
+    }
+
+    public async Task CambiarEstado(int idCurso, bool activo)
+    {
+        try
+        {
+            _logger.LogInformation("Cambiando estado del curso. IdCurso: {IdCurso}, Activo: {Activo}", idCurso, activo);
+
+            string query = @"
+            UPDATE Cursos
+            SET activo = @Activo
+            WHERE id_curso = @IdCurso;
+        ";
+
+            int filas = await _conexion.ExecuteAsync(query, new { Activo = activo, IdCurso = idCurso });
+
+            if (filas == 0)
+            {
+                _logger.LogWarning("No se encontró el curso con IdCurso: {IdCurso} para cambiar estado.", idCurso);
+                throw new InvalidOperationException("No se encontró el curso para cambiar estado.");
+            }
+
+            _logger.LogInformation("Estado del curso actualizado correctamente. IdCurso: {IdCurso}", idCurso);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cambiar estado del curso con IdCurso: {IdCurso}", idCurso);
+            throw new RepositoryException("Ocurrió un error al intentar cambiar el estado del curso.", ex);
         }
     }
 

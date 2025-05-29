@@ -11,4 +11,5 @@ public interface ICursosRepository
     Task<bool> Eliminar(int id);
     Task<Curso?> ObtenerPorId(int idCurso);
     Task<IEnumerable<CursoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request);
+    Task CambiarEstado(int idCurso, bool activo);
 }

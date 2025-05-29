@@ -99,4 +99,9 @@ public class CursosService : ICursosService
 
 
     }
+
+    public async Task CambiarEstado(int idCurso, bool activo)
+    {
+        await _repository.CambiarEstado(idCurso, activo);
+    }
 }

@@ -9,4 +9,5 @@ public interface ICursosService
     Task<int> Actualizar(int id, CursoRequest request);
     Task<bool> Eliminar(int id);
     Task<IEnumerable<CursoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request);
+    Task CambiarEstado(int idCurso, bool activo);
 }

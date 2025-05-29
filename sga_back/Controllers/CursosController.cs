@@ -45,4 +45,12 @@ public class CursosController : ControllerBase
         return Ok(cursos);
     }
 
+    [HttpPut("{id}/cambiar-estado")]
+    public async Task<IActionResult> CambiarEstado(int id, [FromBody] CambiarEstadoCursoRequest request)
+    {
+        await _service.CambiarEstado(id, request.Activo);
+        return NoContent();
+
+    }
+
 }

@@ -14,4 +14,5 @@ public class CursoDto
     public DateTime FechaInicio { get; set; }
     public DateTime FechaFin { get; set; }
     public decimal MontoMatricula { get; set; }
+    public bool Activo { get; set; }
 }
