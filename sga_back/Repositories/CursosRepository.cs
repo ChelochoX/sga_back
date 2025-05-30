@@ -25,9 +25,12 @@ public class CursosRepository : ICursosRepository
             _logger.LogInformation("Intentando insertar curso: {Nombre}", curso.Nombre);
 
             string queryInsertar = @"
-            INSERT INTO Cursos (nombre, descripcion, duracion, unidad_duracion, cantidad_cuota, monto_matricula, monto_cuota, tiene_practica, costo_practica, fecha_inicio, fecha_fin)
-            VALUES (@Nombre, @Descripcion, @Duracion, @UnidadDuracion, @CantidadCuota, @MontoMatricula, @MontoCuota, @TienePractica, @CostoPractica, @FechaInicio, @FechaFin);
-            SELECT CAST(SCOPE_IDENTITY() as int);";
+                INSERT INTO Cursos 
+                (nombre, descripcion, duracion, unidad_duracion, cantidad_cuota, monto_matricula, monto_cuota, tiene_practica, costo_practica, fecha_inicio, fecha_fin, activo)
+                VALUES 
+                (@Nombre, @Descripcion, @Duracion, @UnidadDuracion, @CantidadCuota, @MontoMatricula, @MontoCuota, @TienePractica, @CostoPractica, @FechaInicio, @FechaFin, @Activo);
+                SELECT CAST(SCOPE_IDENTITY() as int)";
+
 
             int id = await _conexion.ExecuteScalarAsync<int>(queryInsertar, curso);
             _logger.LogInformation("Curso insertado con ID: {IdCurso}", id);
