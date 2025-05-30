@@ -50,9 +50,9 @@ public class CursoRequestValidator : AbstractValidator<CursoRequest>
         _ = RuleFor(c => c.FechaInicio)
             .NotEmpty().WithMessage("La fecha de inicio es obligatoria.");
 
-        _ = RuleFor(c => c.FechaFin)
-            .NotEmpty().WithMessage("La fecha de fin es obligatoria.")
-            .GreaterThan(c => c.FechaInicio).WithMessage("La fecha de fin debe ser posterior a la fecha de inicio.");
+        //_ = RuleFor(c => c.FechaFin)
+        //    .NotEmpty().WithMessage("La fecha de fin es obligatoria.")
+        //    .GreaterThan(c => c.FechaInicio).WithMessage("La fecha de fin debe ser posterior a la fecha de inicio.");
 
     }
 }
