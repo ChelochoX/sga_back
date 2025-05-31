@@ -32,6 +32,11 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Usuario inactivo. Contacta al administrador." });
         }
 
+        if ((string.IsNullOrEmpty(usuario.Estado) || usuario.Estado == "Inactivo"))
+        {
+            return BadRequest(new { message = "Usuario inactivo. Contacta al administrador." });
+        }
+
         // Si el usuario está inactivo pero requiere cambio de contraseña (primer login)
         if (usuario.Estado == "Activo" && usuario.RequiereCambioContrasena)
         {
