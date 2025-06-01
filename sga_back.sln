@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sga_back", "sga_back\sga_back.csproj", "{BD93D573-D1FA-4B2A-8F92-606F0DA0660F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "sga_back", "sga_back\sga_back.csproj", "{BD93D573-D1FA-4B2A-8F92-606F0DA0660F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Elementos de la solución", "Elementos de la solución", "{D49E7C0D-B0A7-47CA-A6E0-AEEDD8273132}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
