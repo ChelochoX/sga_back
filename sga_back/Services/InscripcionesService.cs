@@ -143,10 +143,9 @@ public class InscripcionesService : IInscripcionesService
         return inscripcion != null ? _mapper.Map<InscripcionResponse>(inscripcion) : null;
     }
 
-    public async Task<IEnumerable<InscripcionResponse>> ObtenerTodas()
+    public async Task<IEnumerable<InscripcionDetalleDto>> ObtenerTodas(InscripcionFiltroRequest filtro)
     {
-        var inscripciones = await _repository.ObtenerTodas();
-        return _mapper.Map<IEnumerable<InscripcionResponse>>(inscripciones);
+        return await _repository.ObtenerTodas(filtro);
     }
 
     public async Task<IEnumerable<EstudianteDto>> ObtenerEstudiantes(string? search)

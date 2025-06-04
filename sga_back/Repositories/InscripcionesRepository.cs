@@ -3,6 +3,7 @@ using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
+using sga_back.Request;
 using System.Data;
 
 namespace sga_back.Repositories;
@@ -169,35 +170,57 @@ public class InscripcionesRepository : IInscripcionesRepository
     }
 
 
-    public async Task<IEnumerable<Inscripcion>> ObtenerTodas()
+    public async Task<IEnumerable<InscripcionDetalleDto>> ObtenerTodas(InscripcionFiltroRequest filtro)
     {
         try
         {
-            _logger.LogInformation("Obteniendo todas las inscripciones.");
+            _logger.LogInformation("Obteniendo inscripciones con filtros: {@Filtro}", filtro);
 
-            const string query = @"
-                SELECT  i.id_inscripcion             AS IdInscripcion,
-                        i.id_persona                AS IdPersona,
-                        i.id_curso                  AS IdCurso,
-                        i.fecha_inscripcion         AS FechaInscripcion,
-                        i.estado                    AS Estado,
-                        i.monto_descuento           AS MontoDescuento,
-                        i.motivo_descuento          AS MotivoDescuento,
-                        i.monto_descuento_practica  AS MontoDescuentoPractica,
-                        i.motivo_descuento_practica AS MotivoDescuentoPractica,
-                        i.monto_descuento_matricula AS MontoDescuentoMatricula,
-                        i.motivo_descuento_matricula AS MotivoDescuentoMatricula
-                FROM    Inscripciones i;";
+            var sql = @"
+                        SELECT
+                            i.id_inscripcion        AS IdInscripcion,
+                            p.id_persona            AS IdPersona,
+                            p.nombres + ' ' + p.apellidos AS NombreEstudiante,
+                            c.id_curso              AS IdCurso,
+                            c.nombre                AS NombreCurso,
+                            i.fecha_inscripcion     AS FechaInscripcion,
+                            i.estado                AS Estado,
+                            i.monto_descuento       AS MontoDescuento,
+                            i.motivo_descuento      AS MotivoDescuento,
+                            i.monto_descuento_practica  AS MontoDescPractica,
+                            i.motivo_descuento_practica AS MotivoDescPractica,
+                            i.monto_descuento_matricula AS MontoDescMatricula,
+                            i.motivo_descuento_matricula AS MotivoDescMatricula
+                        FROM
+                            Inscripciones i
+                        JOIN
+                            Personas p ON p.id_persona = i.id_persona
+                        JOIN
+                            Cursos c ON c.id_curso = i.id_curso
+                        WHERE
+                            (@Alumno IS NULL OR (p.nombres + ' ' + p.apellidos) LIKE CONCAT('%', @Alumno, '%'))
+                            AND (@CursoNombre IS NULL OR c.nombre LIKE CONCAT('%', @CursoNombre, '%'))
+                            AND (@FechaDesde IS NULL OR i.fecha_inscripcion >= @FechaDesde)
+                            AND (@FechaHasta IS NULL OR i.fecha_inscripcion <= @FechaHasta)
+                        ORDER BY
+                            i.fecha_inscripcion DESC;";
 
-            IEnumerable<Inscripcion> inscripciones = await _conexion.QueryAsync<Inscripcion>(query);
+            var parametros = new
+            {
+                Alumno = string.IsNullOrWhiteSpace(filtro?.Alumno) ? null : filtro.Alumno,
+                CursoNombre = string.IsNullOrWhiteSpace(filtro?.CursoNombre) ? null : filtro.CursoNombre,
+                FechaDesde = filtro?.FechaDesde,
+                FechaHasta = filtro?.FechaHasta
+            };
 
-            _logger.LogInformation("Total de inscripciones obtenidas: {TotalInscripciones}", inscripciones.Count());
-            return inscripciones;
+            var lista = await _conexion.QueryAsync<InscripcionDetalleDto>(sql, parametros);
+            _logger.LogInformation("Total inscripciones obtenidas: {Count}", lista.Count());
+            return lista;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener todas las inscripciones.");
-            throw new RepositoryException("Ocurrió un error al intentar obtener las inscripciones.", ex);
+            _logger.LogError(ex, "Error al obtener inscripciones con detalle");
+            throw new RepositoryException("Error al obtener inscripciones", ex);
         }
     }
 
