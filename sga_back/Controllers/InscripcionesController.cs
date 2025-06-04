@@ -56,4 +56,17 @@ public class InscripcionesController : ControllerBase
         return Ok(inscripciones);
     }
 
+    [HttpGet("estudiantes")]
+    public async Task<IActionResult> ObtenerEstudiantes([FromQuery] string? q)
+    {
+        var estudiantes = await _service.ObtenerEstudiantes(q);
+        return Ok(estudiantes);
+    }
+
+    [HttpGet("obtener-cursos")]
+    public async Task<IActionResult> ObtenerCursos([FromQuery] string? search)
+    {
+        var cursos = await _service.ObtenerCursos(search);
+        return Ok(cursos);
+    }
 }

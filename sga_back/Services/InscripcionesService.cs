@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using sga_back.Common;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -148,4 +149,13 @@ public class InscripcionesService : IInscripcionesService
         return _mapper.Map<IEnumerable<InscripcionResponse>>(inscripciones);
     }
 
+    public async Task<IEnumerable<EstudianteDto>> ObtenerEstudiantes(string? search)
+    {
+        return await _repository.ObtenerEstudiantes(search);
+    }
+
+    public async Task<IEnumerable<CursosInscripcionDto>> ObtenerCursos(string? search)
+    {
+        return await _repository.ObtenerCursos(search);
+    }
 }

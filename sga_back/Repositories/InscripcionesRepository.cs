@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -174,7 +175,20 @@ public class InscripcionesRepository : IInscripcionesRepository
         {
             _logger.LogInformation("Obteniendo todas las inscripciones.");
 
-            string query = "SELECT * FROM Inscripciones";
+            const string query = @"
+                SELECT  i.id_inscripcion             AS IdInscripcion,
+                        i.id_persona                AS IdPersona,
+                        i.id_curso                  AS IdCurso,
+                        i.fecha_inscripcion         AS FechaInscripcion,
+                        i.estado                    AS Estado,
+                        i.monto_descuento           AS MontoDescuento,
+                        i.motivo_descuento          AS MotivoDescuento,
+                        i.monto_descuento_practica  AS MontoDescuentoPractica,
+                        i.motivo_descuento_practica AS MotivoDescuentoPractica,
+                        i.monto_descuento_matricula AS MontoDescuentoMatricula,
+                        i.motivo_descuento_matricula AS MotivoDescuentoMatricula
+                FROM    Inscripciones i;";
+
             IEnumerable<Inscripcion> inscripciones = await _conexion.QueryAsync<Inscripcion>(query);
 
             _logger.LogInformation("Total de inscripciones obtenidas: {TotalInscripciones}", inscripciones.Count());
@@ -186,4 +200,83 @@ public class InscripcionesRepository : IInscripcionesRepository
             throw new RepositoryException("Ocurrió un error al intentar obtener las inscripciones.", ex);
         }
     }
+
+    public async Task<IEnumerable<EstudianteDto>> ObtenerEstudiantes(string? search)
+    {
+        try
+        {
+            //Normalizamos: si viene vacío o solo espacios ⇒ NULL
+            var filtro = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+            _logger.LogInformation("Obteniendo estudiantes (filtro = {Filtro})", filtro ?? "«todos»");
+
+            const string sql = @"
+            SELECT DISTINCT
+                   p.id_persona AS IdPersona,
+                   p.nombres    AS Nombres,
+                   p.apellidos  AS Apellidos
+            FROM   Personas       p
+            JOIN   Usuarios       u  ON u.id_persona = p.id_persona
+            JOIN   Usuario_Roles  ur ON ur.id_usuario = u.id_usuario
+            JOIN   Roles          r  ON r.id_rol      = ur.id_rol
+            WHERE  r.nombre_rol = @Rol
+              AND (@Search IS NULL
+                   OR p.nombres   LIKE '%' + @Search + '%'
+                   OR p.apellidos LIKE '%' + @Search + '%')
+            ORDER BY p.nombres, p.apellidos;";
+
+            // 📝 Parametrización segura
+            var param = new
+            {
+                Rol = "Estudiante",
+                Search = filtro                 // ← NULL = trae todo
+            };
+
+            return await _conexion.QueryAsync<EstudianteDto>(sql, param);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener estudiantes");
+            throw new RepositoryException("Error al obtener estudiantes", ex);
+        }
+    }
+
+    public async Task<IEnumerable<CursosInscripcionDto>> ObtenerCursos(string? search)
+    {
+        try
+        {
+            _logger.LogInformation("Obteniendo cursos (filtro = {Search})", search);
+
+            const string sql = @"
+                    SELECT
+                        id_curso   AS IdCurso,
+                        nombre     AS Nombre,
+                        descripcion AS Descripcion
+                    FROM   sga.dbo.Cursos
+                    WHERE  activo = 1
+                      AND (
+                            @Search IS NULL
+                         OR nombre     LIKE '%' + @Search + '%'
+                         OR descripcion LIKE '%' + @Search + '%'
+                          )
+                    ORDER BY nombre;
+                ";
+
+            var filtro = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+            var parametros = new
+            {
+                Search = filtro
+            };
+
+            var lista = await _conexion.QueryAsync<CursosInscripcionDto>(sql, parametros);
+            return lista;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener cursos");
+            throw new RepositoryException("Error al obtener cursos", ex);
+        }
+    }
 }
+
