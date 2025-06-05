@@ -109,8 +109,21 @@ public class InscripcionesRepository : IInscripcionesRepository
         {
             _logger.LogInformation("Intentando eliminar inscripción con ID: {IdInscripcion}", idInscripcion);
 
-            string query = "DELETE FROM Inscripciones WHERE id_inscripcion = @IdInscripcion";
-            int filasAfectadas = await _conexion.ExecuteAsync(query, new { IdInscripcion = idInscripcion });
+            // 1. Eliminar detalles asociados a pagos de la inscripción
+            string deleteDetalles = @"
+            DELETE pd
+            FROM Pagos_Detalle pd
+            JOIN Pagos_Encabezado pe ON pd.id_pago = pe.id_pago
+            WHERE pe.id_inscripcion = @IdInscripcion";
+            await _conexion.ExecuteAsync(deleteDetalles, new { IdInscripcion = idInscripcion });
+
+            // 2. Eliminar encabezados de pagos asociados a la inscripción
+            string deleteEncabezado = "DELETE FROM Pagos_Encabezado WHERE id_inscripcion = @IdInscripcion";
+            await _conexion.ExecuteAsync(deleteEncabezado, new { IdInscripcion = idInscripcion });
+
+            // 3. Eliminar la inscripción en sí
+            string deleteInscripcion = "DELETE FROM Inscripciones WHERE id_inscripcion = @IdInscripcion";
+            int filasAfectadas = await _conexion.ExecuteAsync(deleteInscripcion, new { IdInscripcion = idInscripcion });
 
             if (filasAfectadas == 0)
             {
@@ -127,6 +140,7 @@ public class InscripcionesRepository : IInscripcionesRepository
             throw new RepositoryException("Ocurrió un error al intentar eliminar la inscripción.", ex);
         }
     }
+
 
     public async Task<Inscripcion?> ObtenerPorId(int idInscripcion)
     {
@@ -200,8 +214,14 @@ public class InscripcionesRepository : IInscripcionesRepository
                         WHERE
                             (@Alumno IS NULL OR (p.nombres + ' ' + p.apellidos) LIKE CONCAT('%', @Alumno, '%'))
                             AND (@CursoNombre IS NULL OR c.nombre LIKE CONCAT('%', @CursoNombre, '%'))
-                            AND (@FechaDesde IS NULL OR i.fecha_inscripcion >= @FechaDesde)
-                            AND (@FechaHasta IS NULL OR i.fecha_inscripcion <= @FechaHasta)
+                            AND (
+                                    @FechaDesde IS NULL 
+                                    OR i.fecha_inscripcion >= CONVERT(DATE, @FechaDesde,  23)  
+                            )
+                            AND (
+                                    @FechaHasta IS NULL 
+                                    OR i.fecha_inscripcion <= CONVERT(DATE, @FechaHasta, 23)   
+                            )
                         ORDER BY
                             i.fecha_inscripcion DESC;";
 
