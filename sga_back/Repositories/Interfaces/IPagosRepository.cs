@@ -11,6 +11,6 @@ public interface IPagosRepository
     Task<bool> EliminarPago(int idPago);
     Task<PagoEncabezado?> ObtenerPagoPorId(int idPago);
     Task<IEnumerable<PagoDetalle>> ObtenerDetallesPorPago(int idPago);
-    Task<IEnumerable<PagoDetalleDto>> ObtenerPagosPendientes(PagoFiltroRequest filtro);
-    Task<IEnumerable<PagoDetalleDto>> ObtenerPagosRealizados(PagoFiltroRequest filtro);
+    Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosPendientes(PagoFiltroRequest filtro);
+    Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro);
 }

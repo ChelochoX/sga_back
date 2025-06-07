@@ -10,6 +10,7 @@ public interface IPagosService
     Task<bool> ActualizarPagoConDetalles(int idPago, PagoRequest request);
     Task<bool> EliminarPago(int idPago);
     Task<PagoResponse?> ObtenerPagoPorId(int idPago);
-    Task<IEnumerable<PagoDetalleDto>> ObtenerPagosPendientes(PagoFiltroRequest filtro);
-    Task<IEnumerable<PagoDetalleDto>> ObtenerPagosRealizados(PagoFiltroRequest filtro);
+    Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosPendientes(PagoFiltroRequest filtro);
+    Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro);
+
 }

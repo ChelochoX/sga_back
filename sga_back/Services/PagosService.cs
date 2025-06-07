@@ -92,12 +92,12 @@ public class PagosService : IPagosService
         return response;
     }
 
-    public async Task<IEnumerable<PagoDetalleDto>> ObtenerPagosPendientes(PagoFiltroRequest filtro)
+    public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosPendientes(PagoFiltroRequest filtro)
     {
         return await _repository.ObtenerPagosPendientes(filtro);
     }
 
-    public async Task<IEnumerable<PagoDetalleDto>> ObtenerPagosRealizados(PagoFiltroRequest filtro)
+    public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro)
     {
         return await _repository.ObtenerPagosRealizados(filtro);
     }

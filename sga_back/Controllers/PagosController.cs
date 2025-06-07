@@ -77,8 +77,15 @@ public class PagosController : ControllerBase
     public async Task<IActionResult> ObtenerPagosPendientes([FromBody] PagoFiltroRequest filtro)
     {
         _logger.LogInformation("Solicitud para obtener pagos pendientes. Filtros: {@Filtro}", filtro);
-        var lista = await _service.ObtenerPagosPendientes(filtro);
-        return Ok(lista);
+        var (items, total) = await _service.ObtenerPagosPendientes(filtro);
+
+        var response = new
+        {
+            items,
+            total
+        };
+
+        return Ok(response);
     }
 
     [HttpPost("PagosRealizados")]
@@ -89,7 +96,14 @@ public class PagosController : ControllerBase
     public async Task<IActionResult> ObtenerPagosRealizados([FromBody] PagoFiltroRequest filtro)
     {
         _logger.LogInformation("Solicitud para obtener pagos realizados. Filtros: {@Filtro}", filtro);
-        var lista = await _service.ObtenerPagosRealizados(filtro);
-        return Ok(lista);
+        var (items, total) = await _service.ObtenerPagosRealizados(filtro);
+
+        var response = new
+        {
+            items,
+            total
+        };
+
+        return Ok(response);
     }
 }

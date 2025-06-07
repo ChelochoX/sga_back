@@ -179,42 +179,56 @@ public class PagosRepository : IPagosRepository
         return await _conexion.QueryAsync<PagoDetalle>(query, new { IdPago = idPago });
     }
 
-    public async Task<IEnumerable<PagoDetalleDto>> ObtenerPagosPendientes(PagoFiltroRequest filtro)
+    public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosPendientes(PagoFiltroRequest filtro)
     {
         try
         {
-            _logger.LogInformation("Obteniendo pagos PENDIENTES con filtros: {@Filtro}", filtro);
+            _logger.LogInformation("Obteniendo pagos PENDIENTES agrupados con filtros: {@Filtro}", filtro);
 
             var sql = @"
-            SELECT 
-                pe.id_pago AS IdPago,
-                pe.id_inscripcion AS IdInscripcion,
-                per.id_persona AS IdPersona,
-                per.nombres + ' ' + per.apellidos AS NombreEstudiante,
-                pe.total AS DeudaTotal,
-                pe.tipo_cuenta AS TipoCuenta,
-                pe.descuento AS DescuentoCabecera,
-                pe.observacion,
-                pd.id_detalle AS IdDetallePago,
-                pd.concepto,
-                pd.monto,
-                pd.fecha_vencimiento,
-                pd.fecha_pago,
-                pd.tipo_pago,
-                pd.referencia,
-                pd.voucher_numero,
-                pd.estado
-            FROM Pagos_Encabezado pe
-            JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
-            JOIN Personas per ON per.id_persona = i.id_persona
-            LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
-            WHERE
-                (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
-                AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
-                AND pd.estado = 'Pendiente'
-            ORDER BY
-                per.nombres, pd.fecha_vencimiento
-            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
+        SELECT 
+            pe.id_pago AS IdPago,
+            pe.id_inscripcion AS IdInscripcion,
+            per.nombres + ' ' + per.apellidos AS NombreEstudiante,
+            cu.nombre AS NombreCurso,
+            COALESCE(pe.total, 0) AS DeudaTotal,
+            pe.tipo_cuenta AS TipoCuenta,
+            COALESCE(pe.descuento, 0) AS DescuentoCabecera,
+            pe.observacion AS Observacion,
+            pd.id_detalle AS IdDetallePago,
+            pd.concepto AS Concepto,
+            COALESCE(pd.monto, 0) AS Monto,
+            pd.fecha_vencimiento AS FechaVencimiento,
+            pd.fecha_pago AS FechaPago,
+            pd.tipo_pago AS TipoPago,
+            pd.estado AS Estado
+
+        FROM Pagos_Encabezado pe
+        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+        JOIN Personas per ON per.id_persona = i.id_persona
+        JOIN Cursos cu ON cu.id_curso = i.id_curso -- si quieres el nombre del curso
+        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+        WHERE
+            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
+            AND pd.estado = 'Pendiente'
+        ORDER BY
+            pe.id_pago, pd.fecha_vencimiento
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
+        ";
+
+            // (Total igual que antes)
+            var sqlTotal = @"
+        SELECT COUNT(DISTINCT pe.id_pago)
+        FROM Pagos_Encabezado pe
+        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+        JOIN Personas per ON per.id_persona = i.id_persona
+        JOIN Cursos cu ON cu.id_curso = i.id_curso
+        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+        WHERE
+            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
+            AND pd.estado = 'Pendiente'
         ";
 
             int offset = (filtro.PageNumber - 1) * filtro.PageSize;
@@ -227,53 +241,98 @@ public class PagosRepository : IPagosRepository
                 PageSize = filtro.PageSize
             };
 
-            var lista = await _conexion.QueryAsync<PagoDetalleDto>(sql, parametros);
-            _logger.LogInformation("Total pagos pendientes obtenidos en la página {Page}: {Count}", filtro.PageNumber, lista.Count());
-            return lista;
+            // Traemos todos los resultados en plano
+            var rows = (await _conexion.QueryAsync<dynamic>(sql, parametros)).ToList();
+
+            // Agrupamos en C#
+            var agrupado = rows
+                .GroupBy(r => new { r.IdPago, r.IdInscripcion, r.NombreEstudiante, r.NombreCurso, r.DeudaTotal, r.TipoCuenta, r.DescuentoCabecera, r.Observacion })
+                .Select(g => new PagoCabeceraDto
+                {
+                    IdPago = g.Key.IdPago,
+                    IdInscripcion = g.Key.IdInscripcion,
+                    NombreEstudiante = g.Key.NombreEstudiante,
+                    NombreCurso = g.Key.NombreCurso,
+                    DeudaTotal = g.Key.DeudaTotal,
+                    TipoCuenta = g.Key.TipoCuenta,
+                    DescuentoCabecera = g.Key.DescuentoCabecera,
+                    Observacion = g.Key.Observacion,
+                    Detalles = g
+                        .Where(x => x.IdDetallePago != null)
+                        .Select(x => new PagoDetalleDto
+                        {
+                            IdDetallePago = x.IdDetallePago,
+                            Concepto = x.Concepto,
+                            Monto = x.Monto,
+                            FechaVencimiento = x.FechaVencimiento,
+                            FechaPago = x.FechaPago,
+                            TipoPago = x.TipoPago,
+                            Estado = x.Estado,
+                        }).ToList()
+                }).ToList();
+
+            int total = await _conexion.ExecuteScalarAsync<int>(sqlTotal, parametros);
+
+            return (agrupado, total);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener pagos pendientes");
-            throw new RepositoryException("Error al obtener pagos pendientes", ex);
+            _logger.LogError(ex, "Error al obtener pagos pendientes agrupados");
+            throw new RepositoryException("Error al obtener pagos pendientes agrupados", ex);
         }
     }
 
-    public async Task<IEnumerable<PagoDetalleDto>> ObtenerPagosRealizados(PagoFiltroRequest filtro)
+
+    public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro)
     {
         try
         {
-            _logger.LogInformation("Obteniendo pagos REALIZADOS con filtros: {@Filtro}", filtro);
+            _logger.LogInformation("Obteniendo pagos REALIZADOS agrupados con filtros: {@Filtro}", filtro);
 
             var sql = @"
-            SELECT 
-                pe.id_pago AS IdPago,
-                pe.id_inscripcion AS IdInscripcion,
-                per.id_persona AS IdPersona,
-                per.nombres + ' ' + per.apellidos AS NombreEstudiante,
-                pe.total AS DeudaTotal,
-                pe.tipo_cuenta AS TipoCuenta,
-                pe.descuento AS DescuentoCabecera,
-                pe.observacion,
-                pd.id_detalle AS IdDetallePago,
-                pd.concepto,
-                pd.monto,
-                pd.fecha_vencimiento,
-                pd.fecha_pago,
-                pd.tipo_pago,
-                pd.referencia,
-                pd.voucher_numero,
-                pd.estado
-            FROM Pagos_Encabezado pe
-            JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
-            JOIN Personas per ON per.id_persona = i.id_persona
-            LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
-            WHERE
-                (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
-                AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
-                AND pd.estado = 'Pagado'
-            ORDER BY
-                per.nombres, pd.fecha_vencimiento
-            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
+        SELECT 
+            pe.id_pago AS IdPago,
+            pe.id_inscripcion AS IdInscripcion,
+            per.nombres + ' ' + per.apellidos AS NombreEstudiante,
+            cu.nombre AS NombreCurso,
+            COALESCE(pe.total, 0) AS DeudaTotal,
+            pe.tipo_cuenta AS TipoCuenta,
+            COALESCE(pe.descuento, 0) AS DescuentoCabecera,
+            pe.observacion AS Observacion,
+            pd.id_detalle AS IdDetallePago,
+            pd.concepto AS Concepto,
+            COALESCE(pd.monto, 0) AS Monto,
+            pd.fecha_vencimiento AS FechaVencimiento,
+            pd.fecha_pago AS FechaPago,
+            pd.tipo_pago AS TipoPago,
+            pd.estado AS Estado
+
+        FROM Pagos_Encabezado pe
+        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+        JOIN Personas per ON per.id_persona = i.id_persona
+        JOIN Cursos cu ON cu.id_curso = i.id_curso -- si quieres el nombre del curso
+        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+        WHERE
+            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
+            AND pd.estado = 'Pagado'
+        ORDER BY
+            pe.id_pago, pd.fecha_vencimiento
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
+        ";
+
+            // Para el total, cuenta cabeceras (pagos únicos)
+            var sqlTotal = @"
+        SELECT COUNT(DISTINCT pe.id_pago)
+        FROM Pagos_Encabezado pe
+        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+        JOIN Personas per ON per.id_persona = i.id_persona
+        JOIN Cursos cu ON cu.id_curso = i.id_curso
+        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+        WHERE
+            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
+            AND pd.estado = 'Pagado'
         ";
 
             int offset = (filtro.PageNumber - 1) * filtro.PageSize;
@@ -286,16 +345,47 @@ public class PagosRepository : IPagosRepository
                 PageSize = filtro.PageSize
             };
 
-            var lista = await _conexion.QueryAsync<PagoDetalleDto>(sql, parametros);
-            _logger.LogInformation("Total pagos realizados obtenidos en la página {Page}: {Count}", filtro.PageNumber, lista.Count());
-            return lista;
+            var rows = (await _conexion.QueryAsync<dynamic>(sql, parametros)).ToList();
+
+            var agrupado = rows
+                .GroupBy(r => new { r.IdPago, r.IdInscripcion, r.NombreEstudiante, r.NombreCurso, r.DeudaTotal, r.TipoCuenta, r.DescuentoCabecera, r.Observacion })
+                .Select(g => new PagoCabeceraDto
+                {
+                    IdPago = g.Key.IdPago,
+                    IdInscripcion = g.Key.IdInscripcion,
+                    NombreEstudiante = g.Key.NombreEstudiante,
+                    NombreCurso = g.Key.NombreCurso,
+                    DeudaTotal = g.Key.DeudaTotal,
+                    TipoCuenta = g.Key.TipoCuenta,
+                    DescuentoCabecera = g.Key.DescuentoCabecera,
+                    Observacion = g.Key.Observacion,
+                    Detalles = g
+                        .Where(x => x.IdDetallePago != null)
+                        .Select(x => new PagoDetalleDto
+                        {
+                            IdDetallePago = x.IdDetallePago,
+                            Concepto = x.Concepto,
+                            Monto = x.Monto,
+                            FechaVencimiento = x.FechaVencimiento,
+                            FechaPago = x.FechaPago,
+                            TipoPago = x.TipoPago,
+                            Estado = x.Estado,
+                            // otros campos...
+                        }).ToList()
+                }).ToList();
+
+            int total = await _conexion.ExecuteScalarAsync<int>(sqlTotal, parametros);
+
+            return (agrupado, total);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener pagos realizados");
-            throw new RepositoryException("Error al obtener pagos realizados", ex);
+            _logger.LogError(ex, "Error al obtener pagos realizados agrupados");
+            throw new RepositoryException("Error al obtener pagos realizados agrupados", ex);
         }
     }
+
+
 
 
 }
