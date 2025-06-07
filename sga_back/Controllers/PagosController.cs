@@ -69,4 +69,27 @@ public class PagosController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("PagosPendientes")]
+    [SwaggerOperation(
+           Summary = "Obtiene pagos pendientes filtrados y paginados",
+           Description = "Devuelve la lista paginada de deudas (pagos pendientes) de los estudiantes según filtros de nombre y fecha de vencimiento."
+       )]
+    public async Task<IActionResult> ObtenerPagosPendientes([FromBody] PagoFiltroRequest filtro)
+    {
+        _logger.LogInformation("Solicitud para obtener pagos pendientes. Filtros: {@Filtro}", filtro);
+        var lista = await _service.ObtenerPagosPendientes(filtro);
+        return Ok(lista);
+    }
+
+    [HttpPost("PagosRealizados")]
+    [SwaggerOperation(
+        Summary = "Obtiene pagos realizados filtrados y paginados",
+        Description = "Devuelve la lista paginada de pagos realizados según filtros de nombre y fecha de vencimiento."
+    )]
+    public async Task<IActionResult> ObtenerPagosRealizados([FromBody] PagoFiltroRequest filtro)
+    {
+        _logger.LogInformation("Solicitud para obtener pagos realizados. Filtros: {@Filtro}", filtro);
+        var lista = await _service.ObtenerPagosRealizados(filtro);
+        return Ok(lista);
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using sga_back.Common;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -89,5 +90,15 @@ public class PagosService : IPagosService
 
         _logger.LogInformation("Pago obtenido con éxito. ID: {IdPago}", idPago);
         return response;
+    }
+
+    public async Task<IEnumerable<PagoDetalleDto>> ObtenerPagosPendientes(PagoFiltroRequest filtro)
+    {
+        return await _repository.ObtenerPagosPendientes(filtro);
+    }
+
+    public async Task<IEnumerable<PagoDetalleDto>> ObtenerPagosRealizados(PagoFiltroRequest filtro)
+    {
+        return await _repository.ObtenerPagosRealizados(filtro);
     }
 }
