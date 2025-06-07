@@ -70,14 +70,17 @@ public class InscripcionesService : IInscripcionesService
         totalCurso = Math.Max(totalCurso, 0);
         totalPractica = Math.Max(totalPractica, 0);
 
-        // 🔹 1. Agregar el pago de matrícula como primer concepto 🔹
-        detalles.Add(new PagoDetalle
+        // 🔹 1. Agregar el pago de matrícula como primer concepto (solo si el monto de matrícula es mayor que 0) 🔹
+        if (curso.MontoMatricula > 0)
         {
-            Concepto = $"Matrícula - {curso.Nombre}",
-            Monto = curso.MontoMatricula,
-            FechaVencimiento = fechaInscripcion, // La matrícula vence el mismo día de la inscripción
-            Estado = "Pendiente"
-        });
+            detalles.Add(new PagoDetalle
+            {
+                Concepto = $"Matrícula - {curso.Nombre}",
+                Monto = curso.MontoMatricula,
+                FechaVencimiento = fechaInscripcion, // La matrícula vence el mismo día de la inscripción
+                Estado = "Pendiente"
+            });
+        }
 
         // 🔹 2. Generar las cuotas del curso y las cuotas de práctica en paralelo 🔹
         decimal montoPorCuota = totalCurso / curso.CantidadCuota;
@@ -85,14 +88,17 @@ public class InscripcionesService : IInscripcionesService
 
         for (int i = 1; i <= curso.CantidadCuota; i++)
         {
-            // Cuota del curso
-            detalles.Add(new PagoDetalle
+            // Solo agregar si el monto por cuota es mayor que 0
+            if (montoPorCuota > 0)
             {
-                Concepto = $"Cuota {i} - {curso.Nombre}",
-                Monto = montoPorCuota,
-                FechaVencimiento = fechaVencimiento,
-                Estado = "Pendiente"
-            });
+                detalles.Add(new PagoDetalle
+                {
+                    Concepto = $"Cuota {i} - {curso.Nombre}",
+                    Monto = montoPorCuota,
+                    FechaVencimiento = fechaVencimiento,
+                    Estado = "Pendiente"
+                });
+            }
 
             // Cuota de práctica (se genera junto con la cuota del curso)
             if (curso.TienePractica == 'S' && montoPorPractica > 0)
