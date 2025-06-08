@@ -282,7 +282,6 @@ public class PagosRepository : IPagosRepository
         }
     }
 
-
     public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro)
     {
         try
@@ -385,7 +384,104 @@ public class PagosRepository : IPagosRepository
         }
     }
 
+    public async Task RegistrarFacturaContado(FacturaContadoRequest request)
+    {
+        using var tran = _conexion.BeginTransaction();
+        try
+        {
+            _logger.LogInformation("Registrando FACTURA CONTADO para el pago: {@Request}", request);
 
+            // 1. Insertar Cabecera de Factura
+            var sqlFactura = @"
+            INSERT INTO Facturas (
+                sucursal, caja, numero, fecha_emision, ruc_cliente, nombre_cliente, total_factura, tipo_venta, estado, observacion, fecha_registro, usuario_registro
+            ) OUTPUT INSERTED.id_factura
+            VALUES (
+                @Sucursal, @Caja, @Numero, @FechaEmision, @RucCliente, @NombreCliente, @TotalFactura, 'Contado', 'Emitido', @Observacion, GETDATE(), @UsuarioRegistro
+            );";
 
+            int idFactura = await _conexion.ExecuteScalarAsync<int>(
+                sqlFactura,
+                new
+                {
+                    request.Sucursal,
+                    request.Caja,
+                    request.Numero,
+                    FechaEmision = DateTime.Now,
+                    request.RucCliente,
+                    request.NombreCliente,
+                    TotalFactura = request.TotalFactura,
+                    request.Observacion,
+                    request.UsuarioRegistro
+                },
+                tran
+            );
+
+            // 2. Insertar Detalle(s) de Factura y actualizar pagos
+            foreach (var detalle in request.Detalles)
+            {
+                // a. Insertar detalle
+                var sqlDetalle = @"
+                INSERT INTO Facturas_Detalle (
+                    id_factura, concepto, monto, id_pago, observacion
+                ) VALUES (
+                    @IdFactura, @Concepto, @Monto, @IdPago, @Observacion
+                );";
+                await _conexion.ExecuteAsync(
+                    sqlDetalle,
+                    new
+                    {
+                        IdFactura = idFactura,
+                        detalle.Concepto,
+                        detalle.Monto,
+                        IdPago = detalle.IdPago,
+                        Observacion = detalle.Observacion
+                    },
+                    tran
+                );
+
+                // b. Marcar la cuota como pagada (Pago_Detalle)
+                var sqlPagoDetalle = @"
+                UPDATE Pagos_Detalle
+                SET estado = 'Pagado', fecha_pago = GETDATE()
+                WHERE id_detalle = @IdDetallePago;";
+
+                await _conexion.ExecuteAsync(sqlPagoDetalle, new { IdDetallePago = detalle.IdDetallePago }, tran);
+
+                // c. Actualizar el monto pendiente del Pago_Encabezado
+                // Sumar todos los detalles pendientes y marcar como pagado si corresponde
+                var sqlUpdateEncabezado = @"
+                UPDATE Pagos_Encabezado
+                SET total = (
+                    SELECT SUM(CASE WHEN estado = 'Pendiente' THEN monto ELSE 0 END)
+                    FROM Pagos_Detalle
+                    WHERE id_pago = @IdPago
+                )
+                WHERE id_pago = @IdPago;";
+
+                await _conexion.ExecuteAsync(sqlUpdateEncabezado, new { IdPago = detalle.IdPago }, tran);
+
+                // d. Si ya no hay cuotas pendientes, marcar el pago cabecera como "Pagado"
+                var sqlCheckPendientes = @"
+                IF NOT EXISTS (
+                    SELECT 1 FROM Pagos_Detalle WHERE id_pago = @IdPago AND estado = 'Pendiente'
+                )
+                UPDATE Pagos_Encabezado
+                SET estado = 'Pagado'
+                WHERE id_pago = @IdPago;";
+
+                await _conexion.ExecuteAsync(sqlCheckPendientes, new { IdPago = detalle.IdPago }, tran);
+            }
+
+            tran.Commit();
+            _logger.LogInformation("Factura contado registrada con éxito. ID: {IdFactura}", idFactura);
+        }
+        catch (Exception ex)
+        {
+            tran.Rollback();
+            _logger.LogError(ex, "Error al registrar factura contado");
+            throw new RepositoryException("Error al registrar factura contado", ex);
+        }
+    }
 
 }

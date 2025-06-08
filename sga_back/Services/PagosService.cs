@@ -101,4 +101,9 @@ public class PagosService : IPagosService
     {
         return await _repository.ObtenerPagosRealizados(filtro);
     }
+
+    public async Task RegistrarFacturaContado(FacturaContadoRequest request)
+    {
+        await _repository.RegistrarFacturaContado(request);
+    }
 }

@@ -106,4 +106,13 @@ public class PagosController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("RegistrarFacturaContado")]
+    [SwaggerOperation(Summary = "Registra una factura contado y actualiza la cuenta corriente")]
+    public async Task<IActionResult> RegistrarFacturaContado([FromBody] FacturaContadoRequest request)
+    {
+        await _service.RegistrarFacturaContado(request);
+        return Ok(new { message = "Factura registrada con éxito" });
+    }
+
 }
