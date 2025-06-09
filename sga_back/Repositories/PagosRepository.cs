@@ -484,4 +484,49 @@ public class PagosRepository : IPagosRepository
         }
     }
 
+    public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
+    {
+        try
+        {
+            _logger.LogInformation("Consultando configuración para documento {CodigoDocumento}", codigoDocumento);
+
+            string sql = @"
+            SELECT TOP 1
+                dfc.Id,
+                tdf.Nombre AS TipoDocumento,
+                dfc.Sucursal,
+                dfc.PuntoExpedicion,
+                dfc.Timbrado,
+                dfc.NumeroActual,
+                dfc.NumeroInicio,
+                dfc.NumeroFin,
+                dfc.VigenciaDesde,
+                dfc.VigenciaHasta,
+                dfc.RucEmisor,
+                dfc.RazonSocialEmisor,
+                dfc.DireccionEmisor
+            FROM DocumentosFiscalesConfig dfc
+            INNER JOIN TiposDocumentosFiscales tdf ON dfc.TipoDocumentoId = tdf.Id
+            WHERE dfc.Activo = 1 AND tdf.Activo = 1
+                AND tdf.CodigoDocumento = @CodigoDocumento
+                AND GETDATE() BETWEEN ISNULL(dfc.VigenciaDesde, '1900-01-01') AND ISNULL(dfc.VigenciaHasta, '2099-12-31')
+            ORDER BY dfc.Id DESC
+        ";
+
+            var config = await _conexion.QueryFirstOrDefaultAsync<DocumentoFiscalConfigDto>(sql, new { CodigoDocumento = codigoDocumento });
+
+            if (config == null)
+                throw new RepositoryException("No se encontró configuración vigente para el documento solicitado");
+
+            return config;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener configuración de documento fiscal por código");
+            throw new RepositoryException("No se pudo obtener la configuración del documento fiscal", ex);
+        }
+    }
+
+
+
 }

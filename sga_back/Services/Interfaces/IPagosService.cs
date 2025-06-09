@@ -13,5 +13,6 @@ public interface IPagosService
     Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosPendientes(PagoFiltroRequest filtro);
     Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro);
     Task RegistrarFacturaContado(FacturaContadoRequest request);
+    Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento);
 
 }

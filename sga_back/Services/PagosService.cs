@@ -106,4 +106,9 @@ public class PagosService : IPagosService
     {
         await _repository.RegistrarFacturaContado(request);
     }
+
+    public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
+    {
+        return await _repository.ObtenerConfiguracionPorCodigoDocumento(codigoDocumento);
+    }
 }

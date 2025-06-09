@@ -115,4 +115,11 @@ public class PagosController : ControllerBase
         return Ok(new { message = "Factura registrada con éxito" });
     }
 
+
+    [HttpGet("ConfiguracionDocumentoFiscal")]
+    public async Task<IActionResult> GetConfiguracionDocumentoFiscal([FromQuery] string codigoDocumento)
+    {
+        var config = await _service.ObtenerConfiguracionPorCodigoDocumento(codigoDocumento);
+        return Ok(config);
+    }
 }
