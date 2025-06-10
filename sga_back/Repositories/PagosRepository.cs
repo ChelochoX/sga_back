@@ -191,6 +191,12 @@ public class PagosRepository : IPagosRepository
             pe.id_inscripcion AS IdInscripcion,
             per.nombres + ' ' + per.apellidos AS NombreEstudiante,
             cu.nombre AS NombreCurso,
+            per.direccion AS DireccionEstudiante,
+	        CASE 
+		    WHEN per.ruc = 'S' THEN CONCAT(per.cedula, '-', per.digito_verificador)
+		    ELSE per.cedula
+	        END AS RucEstudiante,
+	        per.telefono As TelefonoEstudiante,
             COALESCE(pe.total, 0) AS DeudaTotal,
             pe.tipo_cuenta AS TipoCuenta,
             COALESCE(pe.descuento, 0) AS DescuentoCabecera,
@@ -246,13 +252,29 @@ public class PagosRepository : IPagosRepository
 
             // Agrupamos en C#
             var agrupado = rows
-                .GroupBy(r => new { r.IdPago, r.IdInscripcion, r.NombreEstudiante, r.NombreCurso, r.DeudaTotal, r.TipoCuenta, r.DescuentoCabecera, r.Observacion })
+                .GroupBy(r => new
+                {
+                    r.IdPago,
+                    r.IdInscripcion,
+                    r.NombreEstudiante,
+                    r.DireccionEstudiante,
+                    r.RucEstudiante,
+                    r.TelefonoEstudiante,
+                    r.NombreCurso,
+                    r.DeudaTotal,
+                    r.TipoCuenta,
+                    r.DescuentoCabecera,
+                    r.Observacion
+                })
                 .Select(g => new PagoCabeceraDto
                 {
                     IdPago = g.Key.IdPago,
                     IdInscripcion = g.Key.IdInscripcion,
                     NombreEstudiante = g.Key.NombreEstudiante,
                     NombreCurso = g.Key.NombreCurso,
+                    DireccionEstudiante = g.Key.DireccionEstudiante,
+                    RucEstudiante = g.Key.RucEstudiante,
+                    TelefonoEstudiante = g.Key.TelefonoEstudiante,
                     DeudaTotal = g.Key.DeudaTotal,
                     TipoCuenta = g.Key.TipoCuenta,
                     DescuentoCabecera = g.Key.DescuentoCabecera,
