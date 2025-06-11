@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using sga_back.Common;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
@@ -8,15 +9,18 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+//[Authorize]
 public class PagosController : ControllerBase
 {
     private readonly IPagosService _service;
     private readonly ILogger<PagosController> _logger;
+    private readonly UserContext _userContext;
 
-    public PagosController(ILogger<PagosController> logger, IPagosService service)
+    public PagosController(ILogger<PagosController> logger, IPagosService service, UserContext userContext)
     {
         _logger = logger;
         _service = service;
+        _userContext = userContext;
     }
 
     [HttpPost("RegistrarPago")]
@@ -107,10 +111,13 @@ public class PagosController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("RegistrarFacturaContado")]
+    [HttpPost("RegistrarFactura")]
     [SwaggerOperation(Summary = "Registra una factura contado y actualiza la cuenta corriente")]
     public async Task<IActionResult> RegistrarFacturaContado([FromBody] FacturaContadoRequest request)
     {
+        //Obtenemos los datos del usuario
+        request.UsuarioRegistro = _userContext.NombreUsuario;
+
         await _service.RegistrarFacturaContado(request);
         return Ok(new { message = "Factura registrada con éxito" });
     }

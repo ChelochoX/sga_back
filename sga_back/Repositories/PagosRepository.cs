@@ -408,19 +408,29 @@ public class PagosRepository : IPagosRepository
 
     public async Task RegistrarFacturaContado(FacturaContadoRequest request)
     {
-        using var tran = _conexion.BeginTransaction();
         try
         {
             _logger.LogInformation("Registrando FACTURA CONTADO para el pago: {@Request}", request);
 
+            if (_conexion.State != ConnectionState.Open)
+                _conexion.Open();
+
+            using var tran = _conexion.BeginTransaction();
+
             // 1. Insertar Cabecera de Factura
             var sqlFactura = @"
             INSERT INTO Facturas (
-                sucursal, caja, numero, fecha_emision, ruc_cliente, nombre_cliente, total_factura, tipo_venta, estado, observacion, fecha_registro, usuario_registro
+                sucursal, caja, numero, fecha_emision, ruc_cliente, nombre_cliente,
+                total_guaranies, tipo_factura, total_iva10, total_iva5, total_exenta,
+                estado, observacion, fecha_registro, usuario_registro
             ) OUTPUT INSERTED.id_factura
             VALUES (
-                @Sucursal, @Caja, @Numero, @FechaEmision, @RucCliente, @NombreCliente, @TotalFactura, 'Contado', 'Emitido', @Observacion, GETDATE(), @UsuarioRegistro
+                @Sucursal, @Caja, @Numero, @FechaEmision, @RucCliente, @NombreCliente,
+                @TotalFactura, @TipoFactura, @TotalIva10, 0, 0,
+                'Emitido', @Observacion, GETDATE(), @UsuarioRegistro
             );";
+
+            decimal totalIva10 = request.Detalles.Sum(d => d.Iva); // Calcular IVA total
 
             int idFactura = await _conexion.ExecuteScalarAsync<int>(
                 sqlFactura,
@@ -433,6 +443,8 @@ public class PagosRepository : IPagosRepository
                     request.RucCliente,
                     request.NombreCliente,
                     TotalFactura = request.TotalFactura,
+                    request.TipoFactura,
+                    TotalIva10 = totalIva10,
                     request.Observacion,
                     request.UsuarioRegistro
                 },
@@ -445,24 +457,28 @@ public class PagosRepository : IPagosRepository
                 // a. Insertar detalle
                 var sqlDetalle = @"
                 INSERT INTO Facturas_Detalle (
-                    id_factura, concepto, monto, id_pago, observacion
-                ) VALUES (
-                    @IdFactura, @Concepto, @Monto, @IdPago, @Observacion
+                    id_factura, descripcion, cantidad, precio_unitario,
+                    subtotal, iva_aplicado, monto_iva
+                )
+                VALUES (
+                    @IdFactura, @Descripcion, 1, @PrecioUnitario,
+                    @Subtotal, '10%', @Iva
                 );";
+
                 await _conexion.ExecuteAsync(
                     sqlDetalle,
                     new
                     {
                         IdFactura = idFactura,
-                        detalle.Concepto,
-                        detalle.Monto,
-                        IdPago = detalle.IdPago,
-                        Observacion = detalle.Observacion
+                        Descripcion = detalle.Concepto,
+                        PrecioUnitario = detalle.Monto,
+                        Subtotal = detalle.Monto,
+                        Iva = detalle.Iva
                     },
                     tran
                 );
 
-                // b. Marcar la cuota como pagada (Pago_Detalle)
+                // b. Marcar la cuota como pagada
                 var sqlPagoDetalle = @"
                 UPDATE Pagos_Detalle
                 SET estado = 'Pagado', fecha_pago = GETDATE()
@@ -471,7 +487,6 @@ public class PagosRepository : IPagosRepository
                 await _conexion.ExecuteAsync(sqlPagoDetalle, new { IdDetallePago = detalle.IdDetallePago }, tran);
 
                 // c. Actualizar el monto pendiente del Pago_Encabezado
-                // Sumar todos los detalles pendientes y marcar como pagado si corresponde
                 var sqlUpdateEncabezado = @"
                 UPDATE Pagos_Encabezado
                 SET total = (
@@ -482,29 +497,24 @@ public class PagosRepository : IPagosRepository
                 WHERE id_pago = @IdPago;";
 
                 await _conexion.ExecuteAsync(sqlUpdateEncabezado, new { IdPago = detalle.IdPago }, tran);
-
-                // d. Si ya no hay cuotas pendientes, marcar el pago cabecera como "Pagado"
-                var sqlCheckPendientes = @"
-                IF NOT EXISTS (
-                    SELECT 1 FROM Pagos_Detalle WHERE id_pago = @IdPago AND estado = 'Pendiente'
-                )
-                UPDATE Pagos_Encabezado
-                SET estado = 'Pagado'
-                WHERE id_pago = @IdPago;";
-
-                await _conexion.ExecuteAsync(sqlCheckPendientes, new { IdPago = detalle.IdPago }, tran);
             }
 
             tran.Commit();
-            _logger.LogInformation("Factura contado registrada con éxito. ID: {IdFactura}", idFactura);
+            _logger.LogInformation("Factura registrada exitosamente. ID: {IdFactura}", idFactura);
         }
         catch (Exception ex)
         {
-            tran.Rollback();
             _logger.LogError(ex, "Error al registrar factura contado");
             throw new RepositoryException("Error al registrar factura contado", ex);
         }
+        finally
+        {
+            if (_conexion.State == ConnectionState.Open)
+                _conexion.Close();
+        }
     }
+
+
 
     public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
     {

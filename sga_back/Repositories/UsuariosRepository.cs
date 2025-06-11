@@ -199,7 +199,6 @@ public class UsuariosRepository : IUsuariosRepository
         }
     }
 
-
     public async Task<bool> ActualizarContrasena(int idUsuario, string nuevaContrasena, string estado, bool requiereCambioContrasena)
     {
         try
@@ -362,6 +361,38 @@ public class UsuariosRepository : IUsuariosRepository
             throw new RepositoryException("Ocurrió un error al intentar cambiar el estado del usuario.", ex);
         }
     }
+
+    public async Task<Usuario?> ObtenerUsuarioActivoPorId(int idUsuario)
+    {
+        try
+        {
+            _logger.LogInformation("Validando existencia y estado del usuario con ID: {IdUsuario}", idUsuario);
+
+            string query = @"
+            SELECT 
+                id_usuario AS IdUsuario,
+                id_persona AS IdPersona,
+                nombre_usuario AS NombreUsuario,
+                estado AS Estado
+            FROM Usuarios
+            WHERE id_usuario = @IdUsuario AND estado = 'Activo';";
+
+            var usuario = await _conexion.QueryFirstOrDefaultAsync<Usuario>(query, new { IdUsuario = idUsuario });
+
+            if (usuario == null)
+            {
+                _logger.LogWarning("Usuario con ID {IdUsuario} no encontrado o no activo.", idUsuario);
+            }
+
+            return usuario;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al validar el usuario por ID");
+            throw new RepositoryException("Error al validar el usuario por ID", ex);
+        }
+    }
+
 
 
 }
