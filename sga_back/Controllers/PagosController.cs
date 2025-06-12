@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using sga_back.Common;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
@@ -9,7 +10,7 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class PagosController : ControllerBase
 {
     private readonly IPagosService _service;

@@ -13,16 +13,18 @@ namespace sga_back.Services;
 public class PagosService : IPagosService
 {
     private readonly IPagosRepository _repository;
+    private readonly ICajaRepository _repositoryCaja;
     private readonly IMapper _mapper;
     private readonly ILogger<PagosService> _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    public PagosService(ILogger<PagosService> logger, IPagosRepository repository, IMapper mapper, IServiceProvider serviceProvider)
+    public PagosService(ILogger<PagosService> logger, IPagosRepository repository, IMapper mapper, IServiceProvider serviceProvider, ICajaRepository repositoryCaja)
     {
         _logger = logger;
         _repository = repository;
         _mapper = mapper;
         _serviceProvider = serviceProvider;
+        _repositoryCaja = repositoryCaja;
     }
 
     public async Task<int> InsertarPagoConDetalles(PagoRequest request)
@@ -104,7 +106,23 @@ public class PagosService : IPagosService
 
     public async Task RegistrarFacturaContado(FacturaContadoRequest request)
     {
+        // 1. Registrar la factura
         await _repository.RegistrarFacturaContado(request);
+
+        // 2. Crear el movimiento en caja
+        var movimiento = new CajaMovimiento
+        {
+            Fecha = DateTime.Now,
+            TipoMovimiento = "Ingreso",
+            Monto = request.TotalFactura,
+            Concepto = $"Factura Contado - Alumno: {request.NombreCliente}",
+            Usuario = request.UsuarioRegistro,
+            Referencia = $"Factura Nro. {request.Sucursal} {request.Caja} {request.Numero}"
+        };
+
+        await _repositoryCaja.InsertarMovimiento(movimiento);
+
+        _logger.LogInformation("Factura registrada y movimiento en caja insertado.");
     }
 
     public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
