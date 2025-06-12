@@ -499,6 +499,21 @@ public class PagosRepository : IPagosRepository
                 await _conexion.ExecuteAsync(sqlUpdateEncabezado, new { IdPago = detalle.IdPago }, tran);
             }
 
+            // 3. Actualizar el ultimo nro utilizado en la numeracion de la factura
+            var sqlActualizarNumero = @"
+                UPDATE DocumentosFiscalesConfig
+                SET NumeroActual = NumeroActual + 1
+                WHERE ConceptoDocumento = @ConceptoDocumento
+                  AND Activo = 1
+                  AND NumeroActual < NumeroFin;
+                ";
+
+            await _conexion.ExecuteAsync(
+                sqlActualizarNumero,
+                new { ConceptoDocumento = "FACTURA" },
+                tran
+            );
+
             tran.Commit();
             _logger.LogInformation("Factura registrada exitosamente. ID: {IdFactura}", idFactura);
         }
@@ -513,8 +528,6 @@ public class PagosRepository : IPagosRepository
                 _conexion.Close();
         }
     }
-
-
 
     public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
     {
@@ -550,12 +563,22 @@ public class PagosRepository : IPagosRepository
             if (config == null)
                 throw new RepositoryException("No se encontró configuración vigente para el documento solicitado");
 
+            if (config.NumeroActual > config.NumeroFin)
+                throw new RepositoryException("¡Atención! Se ha alcanzado el número máximo permitido para esta serie de facturación." +
+                    " Para continuar emitiendo documentos, por favor registre un nuevo rango de numeración o actualice la configuración del timbrado.");
+
+
             return config;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener configuración de documento fiscal por código");
+            // No sobreescribas si ya es una RepositoryException
+            if (ex is RepositoryException)
+                throw;
+
             throw new RepositoryException("No se pudo obtener la configuración del documento fiscal", ex);
+
         }
     }
 
