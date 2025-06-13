@@ -107,7 +107,7 @@ public class PagosService : IPagosService
     public async Task RegistrarFacturaContado(FacturaContadoRequest request)
     {
         // 1. Registrar la factura
-        await _repository.RegistrarFacturaContado(request);
+        int idFactura = await _repository.RegistrarFacturaContado(request);
 
         // 2. Crear el movimiento en caja
         var movimiento = new CajaMovimiento
@@ -117,7 +117,8 @@ public class PagosService : IPagosService
             Monto = request.TotalFactura,
             Concepto = $"Factura Contado - Alumno: {request.NombreCliente}",
             Usuario = request.UsuarioRegistro,
-            Referencia = $"Factura Nro. {request.Sucursal} {request.Caja} {request.Numero}"
+            Referencia = $"Factura Nro. {request.Sucursal} {request.Caja} {request.Numero}",
+            IdFactura = idFactura
         };
 
         await _repositoryCaja.InsertarMovimiento(movimiento);

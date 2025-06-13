@@ -406,7 +406,7 @@ public class PagosRepository : IPagosRepository
         }
     }
 
-    public async Task RegistrarFacturaContado(FacturaContadoRequest request)
+    public async Task<int> RegistrarFacturaContado(FacturaContadoRequest request)
     {
         try
         {
@@ -515,6 +515,7 @@ public class PagosRepository : IPagosRepository
             );
 
             tran.Commit();
+            return idFactura;
             _logger.LogInformation("Factura registrada exitosamente. ID: {IdFactura}", idFactura);
         }
         catch (Exception ex)

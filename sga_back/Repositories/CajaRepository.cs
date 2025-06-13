@@ -35,7 +35,9 @@ public class CajaRepository : ICajaRepository
                 Concepto AS Concepto,
                 Usuario AS Usuario,
                 Referencia AS Referencia,
-                FechaCreacion AS FechaCreacion
+                FechaCreacion AS FechaCreacion,
+                IdFactura AS IdFactura
+
             FROM CajaMovimientos
             WHERE CAST(Fecha AS DATE) BETWEEN @Desde AND @Hasta
             ORDER BY Fecha DESC";
@@ -74,8 +76,15 @@ public class CajaRepository : ICajaRepository
         {
             _logger.LogInformation("Iniciando inserción de movimiento en caja. Datos: {@Movimiento}", movimiento);
 
-            var sql = @"INSERT INTO CajaMovimientos (Fecha, TipoMovimiento, Monto, Concepto, Usuario, Referencia)
-                    VALUES (@Fecha, @TipoMovimiento, @Monto, @Concepto, @Usuario, @Referencia)";
+            var sql = @"
+                INSERT INTO CajaMovimientos (
+                    Fecha, TipoMovimiento, Monto, Concepto,
+                    Usuario, Referencia, FechaCreacion, IdFactura
+                )
+                VALUES (
+                    @Fecha, @TipoMovimiento, @Monto, @Concepto,
+                    @Usuario, @Referencia, GETDATE(), @IdFactura
+                );";
 
             await _conexion.ExecuteScalarAsync(sql, movimiento);
 

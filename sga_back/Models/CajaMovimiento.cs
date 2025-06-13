@@ -10,4 +10,5 @@ public class CajaMovimiento
     public string Usuario { get; set; }
     public string? Referencia { get; set; }
     public DateTime FechaCreacion { get; set; }
+    public int? IdFactura { get; set; }
 }
