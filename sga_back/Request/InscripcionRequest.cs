@@ -7,6 +7,8 @@ public class InscripcionRequest
     public int IdPersona { get; set; }
     public int IdCurso { get; set; }
     public string Estado { get; set; } = "Activa";
+    public DateTime? FechaInscripcion { get; set; }
+
 
     public decimal MontoDescuento { get; set; }
     public string MotivoDescuento { get; set; } = string.Empty;
@@ -41,5 +43,9 @@ public class InscripcionRequestValidator : AbstractValidator<InscripcionRequest>
 
         _ = RuleFor(i => i.MontoDescuentoPractica)
             .GreaterThanOrEqualTo(0).WithMessage("El monto de descuento de práctica no puede ser negativo.");
+
+        _ = RuleFor(i => i.FechaInscripcion)
+            .LessThanOrEqualTo(DateTime.Today)
+            .WithMessage("La fecha de inscripción no puede ser futura.");
     }
 }

@@ -41,6 +41,7 @@ public class InscripcionesService : IInscripcionesService
 
         Inscripcion inscripcion = _mapper.Map<Inscripcion>(request);
         var idInscripcion = await _repository.Insertar(inscripcion);
+        inscripcion.FechaInscripcion = request.FechaInscripcion ?? DateTime.UtcNow;
 
         // Obtener información del curso
         Curso? curso = await _cursosRepository.ObtenerPorId(request.IdCurso);
