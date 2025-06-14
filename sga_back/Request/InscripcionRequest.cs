@@ -44,8 +44,8 @@ public class InscripcionRequestValidator : AbstractValidator<InscripcionRequest>
         _ = RuleFor(i => i.MontoDescuentoPractica)
             .GreaterThanOrEqualTo(0).WithMessage("El monto de descuento de práctica no puede ser negativo.");
 
-        _ = RuleFor(i => i.FechaInscripcion)
-            .LessThanOrEqualTo(DateTime.Today)
-            .WithMessage("La fecha de inscripción no puede ser futura.");
+        //_ = RuleFor(i => i.FechaInscripcion)
+        //    .LessThanOrEqualTo(DateTime.Today)
+        //    .WithMessage("La fecha de inscripción no puede ser futura.");
     }
 }
