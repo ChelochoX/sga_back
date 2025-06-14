@@ -114,12 +114,12 @@ public class PagosController : ControllerBase
 
     [HttpPost("RegistrarFactura")]
     [SwaggerOperation(Summary = "Registra una factura contado y actualiza la cuenta corriente")]
-    public async Task<IActionResult> RegistrarFacturaContado([FromBody] FacturaContadoRequest request)
+    public async Task<IActionResult> RegistrarFactura([FromBody] FacturaContadoRequest request)
     {
         //Obtenemos los datos del usuario
         request.UsuarioRegistro = _userContext.NombreUsuario;
 
-        await _service.RegistrarFacturaContado(request);
+        await _service.RegistrarFactura(request);
         return Ok(new { message = "Factura registrada con éxito" });
     }
 

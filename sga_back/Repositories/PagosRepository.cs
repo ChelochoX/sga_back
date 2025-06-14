@@ -406,7 +406,7 @@ public class PagosRepository : IPagosRepository
         }
     }
 
-    public async Task<int> RegistrarFacturaContado(FacturaContadoRequest request)
+    public async Task<int> RegistrarFactura(FacturaContadoRequest request)
     {
         try
         {
@@ -422,15 +422,17 @@ public class PagosRepository : IPagosRepository
             INSERT INTO Facturas (
                 sucursal, caja, numero, fecha_emision, ruc_cliente, nombre_cliente,
                 total_guaranies, tipo_factura, total_iva10, total_iva5, total_exenta,
-                estado, observacion, fecha_registro, usuario_registro
+                estado, observacion, id_pago, fecha_registro, usuario_registro
             ) OUTPUT INSERTED.id_factura
             VALUES (
                 @Sucursal, @Caja, @Numero, @FechaEmision, @RucCliente, @NombreCliente,
                 @TotalFactura, @TipoFactura, @TotalIva10, 0, 0,
-                'Emitido', @Observacion, GETDATE(), @UsuarioRegistro
+                'Emitido', @Observacion, @IdPago, GETDATE(), @UsuarioRegistro
             );";
 
             decimal totalIva10 = request.Detalles.Sum(d => d.Iva); // Calcular IVA total
+
+            int idPago = request.Detalles.First().IdPago;
 
             int idFactura = await _conexion.ExecuteScalarAsync<int>(
                 sqlFactura,
@@ -446,6 +448,7 @@ public class PagosRepository : IPagosRepository
                     request.TipoFactura,
                     TotalIva10 = totalIva10,
                     request.Observacion,
+                    idPago,
                     request.UsuarioRegistro
                 },
                 tran

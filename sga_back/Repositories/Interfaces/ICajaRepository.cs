@@ -7,5 +7,5 @@ public interface ICajaRepository
     Task<IEnumerable<CajaMovimiento>> ObtenerMovimientos(DateTime? fechaInicio, DateTime? fechaFin);
     Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones();
     Task InsertarMovimiento(CajaMovimiento movimiento);
-    Task InsertarAnulacion(CajaAnulacion anulacion);
+    Task AnularMovimientoCaja(int idMovimiento, string motivo, string usuario);
 }

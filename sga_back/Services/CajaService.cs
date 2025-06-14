@@ -1,4 +1,5 @@
-﻿using sga_back.Models;
+﻿using sga_back.Common;
+using sga_back.Models;
 using sga_back.Repositories.Interfaces;
 using sga_back.Services.Interfaces;
 
@@ -6,22 +7,26 @@ namespace sga_back.Services;
 
 public class CajaService : ICajaService
 {
-    private readonly ICajaRepository _cajaRepository;
+    private readonly ICajaRepository _repository;
     private readonly ILogger<CajaService> _logger;
+    private readonly UserContext _userContext;
 
-    public CajaService(ICajaRepository cajaRepository, ILogger<CajaService> logger)
+    public CajaService(ICajaRepository cajaRepository, ILogger<CajaService> logger, UserContext userContext)
     {
-        _cajaRepository = cajaRepository;
+        _repository = cajaRepository;
         _logger = logger;
+        _userContext = userContext;
     }
 
     public async Task<IEnumerable<CajaMovimiento>> ObtenerMovimientos(DateTime? fechaInicio, DateTime? fechaFin)
     {
-        return await _cajaRepository.ObtenerMovimientos(fechaInicio, fechaFin);
+        return await _repository.ObtenerMovimientos(fechaInicio, fechaFin);
     }
 
-    public async Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones()
+    public async Task AnularMovimientoCaja(int idMovimiento, string motivo)
     {
-        return await _cajaRepository.ObtenerAnulaciones();
+        string usuario = _userContext.NombreUsuario;
+        await _repository.AnularMovimientoCaja(idMovimiento, motivo, usuario);
     }
+
 }

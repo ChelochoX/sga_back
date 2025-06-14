@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using sga_back.Request;
 using sga_back.Services.Interfaces;
 
 namespace sga_back.Controllers;
@@ -18,13 +19,13 @@ public class CajaController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("anulaciones")]
-    public async Task<IActionResult> GetAnulaciones()
-    {
-        var result = await _service.ObtenerAnulaciones();
-        return Ok(result);
+    //[HttpGet("anulaciones")]
+    //public async Task<IActionResult> GetAnulaciones()
+    //{
+    //    var result = await _service.ObtenerAnulaciones();
+    //    return Ok(result);
 
-    }
+    //}
 
     [HttpGet("movimientos")]
     public async Task<IActionResult> GetMovimientos([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
@@ -32,5 +33,12 @@ public class CajaController : ControllerBase
         var result = await _service.ObtenerMovimientos(desde, hasta);
         return Ok(result);
 
+    }
+
+    [HttpPost("anular-movimiento")]
+    public async Task<IActionResult> AnularMovimiento([FromBody] AnulacionRequest request)
+    {
+        await _service.AnularMovimientoCaja(request.IdMovimiento, request.Motivo);
+        return Ok(new { mensaje = "Movimiento anulado correctamente." });
     }
 }

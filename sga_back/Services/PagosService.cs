@@ -104,10 +104,10 @@ public class PagosService : IPagosService
         return await _repository.ObtenerPagosRealizados(filtro);
     }
 
-    public async Task RegistrarFacturaContado(FacturaContadoRequest request)
+    public async Task RegistrarFactura(FacturaContadoRequest request)
     {
         // 1. Registrar la factura
-        int idFactura = await _repository.RegistrarFacturaContado(request);
+        int idFactura = await _repository.RegistrarFactura(request);
 
         // 2. Crear el movimiento en caja
         var movimiento = new CajaMovimiento

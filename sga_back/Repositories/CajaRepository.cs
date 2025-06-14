@@ -24,7 +24,7 @@ public class CajaRepository : ICajaRepository
             _logger.LogInformation("Obteniendo movimientos de caja con parámetros: FechaInicio={FechaInicio}, FechaFin={FechaFin}", fechaInicio, fechaFin);
 
             DateTime desde = fechaInicio?.Date ?? DateTime.Today;
-            DateTime hasta = fechaFin?.Date ?? fechaInicio?.Date ?? DateTime.Today;
+            DateTime hasta = (fechaFin?.Date.AddDays(1).AddSeconds(-1)) ?? DateTime.Today.AddDays(1).AddSeconds(-1);
 
             var sql = @"
             SELECT 
@@ -40,6 +40,7 @@ public class CajaRepository : ICajaRepository
 
             FROM CajaMovimientos
             WHERE CAST(Fecha AS DATE) BETWEEN @Desde AND @Hasta
+            AND Estado = 'Activo'
             ORDER BY Fecha DESC";
 
             var movimientos = await _conexion.QueryAsync<CajaMovimiento>(sql, new { Desde = desde, Hasta = hasta });
@@ -54,7 +55,6 @@ public class CajaRepository : ICajaRepository
             throw new RepositoryException("No se pudieron obtener los movimientos.");
         }
     }
-
 
     public async Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones()
     {
@@ -98,18 +98,21 @@ public class CajaRepository : ICajaRepository
         }
     }
 
-    public async Task InsertarAnulacion(CajaAnulacion anulacion)
+    public async Task AnularMovimientoCaja(int idMovimiento, string motivo, string usuario)
     {
         try
         {
-            var sql = @"INSERT INTO CajaAnulaciones (IdMovimiento, Motivo, UsuarioAnulacion)
-                        VALUES (@IdMovimiento, @Motivo, @UsuarioAnulacion)";
-            await _conexion.ExecuteAsync(sql, anulacion);
+            await _conexion.ExecuteAsync(
+                "sp_AnularMovimientoCaja",
+                new { IdMovimiento = idMovimiento, Motivo = motivo, UsuarioAnulacion = usuario },
+                commandType: CommandType.StoredProcedure
+            );
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al insertar anulación.");
-            throw new RepositoryException("Error al anular un movimiento.");
+            _logger.LogError(ex, "Error al anular el movimiento vía SP.");
+            throw new RepositoryException("Error al anular el movimiento.", ex);
         }
     }
+
 }
