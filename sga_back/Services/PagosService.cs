@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using sga_back.Common;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -12,16 +13,18 @@ namespace sga_back.Services;
 public class PagosService : IPagosService
 {
     private readonly IPagosRepository _repository;
+    private readonly ICajaRepository _repositoryCaja;
     private readonly IMapper _mapper;
     private readonly ILogger<PagosService> _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    public PagosService(ILogger<PagosService> logger, IPagosRepository repository, IMapper mapper, IServiceProvider serviceProvider)
+    public PagosService(ILogger<PagosService> logger, IPagosRepository repository, IMapper mapper, IServiceProvider serviceProvider, ICajaRepository repositoryCaja)
     {
         _logger = logger;
         _repository = repository;
         _mapper = mapper;
         _serviceProvider = serviceProvider;
+        _repositoryCaja = repositoryCaja;
     }
 
     public async Task<int> InsertarPagoConDetalles(PagoRequest request)
@@ -89,5 +92,42 @@ public class PagosService : IPagosService
 
         _logger.LogInformation("Pago obtenido con éxito. ID: {IdPago}", idPago);
         return response;
+    }
+
+    public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosPendientes(PagoFiltroRequest filtro)
+    {
+        return await _repository.ObtenerPagosPendientes(filtro);
+    }
+
+    public async Task<(IEnumerable<PagoCabeceraDto> items, int total)> ObtenerPagosRealizados(PagoFiltroRequest filtro)
+    {
+        return await _repository.ObtenerPagosRealizados(filtro);
+    }
+
+    public async Task RegistrarFactura(FacturaContadoRequest request)
+    {
+        // 1. Registrar la factura
+        int idFactura = await _repository.RegistrarFactura(request);
+
+        // 2. Crear el movimiento en caja
+        var movimiento = new CajaMovimiento
+        {
+            Fecha = DateTime.Now,
+            TipoMovimiento = "Ingreso",
+            Monto = request.TotalFactura,
+            Concepto = $"Factura Contado - Alumno: {request.NombreCliente}",
+            Usuario = request.UsuarioRegistro,
+            Referencia = $"Factura Nro. {request.Sucursal} {request.Caja} {request.Numero}",
+            IdFactura = idFactura
+        };
+
+        await _repositoryCaja.InsertarMovimiento(movimiento);
+
+        _logger.LogInformation("Factura registrada y movimiento en caja insertado.");
+    }
+
+    public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
+    {
+        return await _repository.ObtenerConfiguracionPorCodigoDocumento(codigoDocumento);
     }
 }

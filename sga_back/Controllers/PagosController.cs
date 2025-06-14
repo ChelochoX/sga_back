@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using sga_back.Common;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
@@ -8,15 +10,18 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PagosController : ControllerBase
 {
     private readonly IPagosService _service;
     private readonly ILogger<PagosController> _logger;
+    private readonly UserContext _userContext;
 
-    public PagosController(ILogger<PagosController> logger, IPagosService service)
+    public PagosController(ILogger<PagosController> logger, IPagosService service, UserContext userContext)
     {
         _logger = logger;
         _service = service;
+        _userContext = userContext;
     }
 
     [HttpPost("RegistrarPago")]
@@ -69,4 +74,60 @@ public class PagosController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("PagosPendientes")]
+    [SwaggerOperation(
+           Summary = "Obtiene pagos pendientes filtrados y paginados",
+           Description = "Devuelve la lista paginada de deudas (pagos pendientes) de los estudiantes según filtros de nombre y fecha de vencimiento."
+       )]
+    public async Task<IActionResult> ObtenerPagosPendientes([FromBody] PagoFiltroRequest filtro)
+    {
+        _logger.LogInformation("Solicitud para obtener pagos pendientes. Filtros: {@Filtro}", filtro);
+        var (items, total) = await _service.ObtenerPagosPendientes(filtro);
+
+        var response = new
+        {
+            items,
+            total
+        };
+
+        return Ok(response);
+    }
+
+    [HttpPost("PagosRealizados")]
+    [SwaggerOperation(
+        Summary = "Obtiene pagos realizados filtrados y paginados",
+        Description = "Devuelve la lista paginada de pagos realizados según filtros de nombre y fecha de vencimiento."
+    )]
+    public async Task<IActionResult> ObtenerPagosRealizados([FromBody] PagoFiltroRequest filtro)
+    {
+        _logger.LogInformation("Solicitud para obtener pagos realizados. Filtros: {@Filtro}", filtro);
+        var (items, total) = await _service.ObtenerPagosRealizados(filtro);
+
+        var response = new
+        {
+            items,
+            total
+        };
+
+        return Ok(response);
+    }
+
+    [HttpPost("RegistrarFactura")]
+    [SwaggerOperation(Summary = "Registra una factura contado y actualiza la cuenta corriente")]
+    public async Task<IActionResult> RegistrarFactura([FromBody] FacturaContadoRequest request)
+    {
+        //Obtenemos los datos del usuario
+        request.UsuarioRegistro = _userContext.NombreUsuario;
+
+        await _service.RegistrarFactura(request);
+        return Ok(new { message = "Factura registrada con éxito" });
+    }
+
+
+    [HttpGet("ConfiguracionDocumentoFiscal")]
+    public async Task<IActionResult> GetConfiguracionDocumentoFiscal([FromQuery] string codigoDocumento)
+    {
+        var config = await _service.ObtenerConfiguracionPorCodigoDocumento(codigoDocumento);
+        return Ok(config);
+    }
 }

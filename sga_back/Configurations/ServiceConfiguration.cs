@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.IdentityModel.Tokens;
 using sga_back.Auth;
+using sga_back.Common;
 using sga_back.Data;
 using System.Data;
 using System.Reflection;
@@ -33,6 +34,8 @@ public static class ServiceConfiguration
 
         // ✅ Registro del JwtService aquí
         services.AddSingleton<JwtService>();
+
+        services.AddScoped<UserContext>();
 
         // ✅ Configuración de Autenticación JWT
         services.AddAuthentication("Bearer")

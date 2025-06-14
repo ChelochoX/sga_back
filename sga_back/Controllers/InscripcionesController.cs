@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using sga_back.Middlewares.Filters;
+﻿using Microsoft.AspNetCore.Mvc;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
 
@@ -8,7 +6,7 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class InscripcionesController : ControllerBase
 {
     private readonly IInscripcionesService _service;
@@ -21,7 +19,7 @@ public class InscripcionesController : ControllerBase
     }
 
     [HttpPost]
-    [PermisoRequerido("Crear", "Inscripciones")]
+    //[PermisoRequerido("Crear", "Inscripciones")]
     public async Task<IActionResult> Insertar([FromBody] InscripcionRequest request)
     {
         int id = await _service.Insertar(request);
@@ -50,10 +48,23 @@ public class InscripcionesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> ObtenerTodas()
+    public async Task<IActionResult> ObtenerTodas([FromQuery] InscripcionFiltroRequest filtro)
     {
-        var inscripciones = await _service.ObtenerTodas();
-        return Ok(inscripciones);
+        var lista = await _service.ObtenerTodas(filtro);
+        return Ok(lista);
     }
 
+    [HttpGet("estudiantes")]
+    public async Task<IActionResult> ObtenerEstudiantes([FromQuery] string? q)
+    {
+        var estudiantes = await _service.ObtenerEstudiantes(q);
+        return Ok(estudiantes);
+    }
+
+    [HttpGet("obtener-cursos")]
+    public async Task<IActionResult> ObtenerCursos([FromQuery] string? search)
+    {
+        var cursos = await _service.ObtenerCursos(search);
+        return Ok(cursos);
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using sga_back.Common;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -40,6 +41,7 @@ public class InscripcionesService : IInscripcionesService
 
         Inscripcion inscripcion = _mapper.Map<Inscripcion>(request);
         var idInscripcion = await _repository.Insertar(inscripcion);
+        inscripcion.FechaInscripcion = request.FechaInscripcion ?? DateTime.UtcNow;
 
         // Obtener información del curso
         Curso? curso = await _cursosRepository.ObtenerPorId(request.IdCurso);
@@ -59,61 +61,69 @@ public class InscripcionesService : IInscripcionesService
         _logger.LogInformation("Generando pagos para la inscripción ID: {IdInscripcion}, Curso: {CursoNombre}", idInscripcion, curso.Nombre);
 
         List<PagoDetalle> detalles = new List<PagoDetalle>();
-        DateTime fechaVencimiento = fechaInscripcion; // Primera fecha de vencimiento es la de la inscripción
+
+        // 🔸 La matrícula se cobra en el mismo día de la inscripción
+        DateTime fechaVencimientoMatricula = fechaInscripcion;
+
+        // 🔸 Las cuotas comienzan a cobrarse a partir de 30 días después de la inscripción
+        DateTime fechaVencimientoCuotas = fechaInscripcion.AddDays(30);
 
         // Aplicar descuentos antes de calcular las cuotas
         decimal totalCurso = curso.MontoCuota * curso.CantidadCuota - montoDescuento;
         decimal totalPractica = (curso.TienePractica == 'S') ? curso.CostoPractica * curso.CantidadCuota - montoDescuentoPractica : 0;
 
-        // Asegurar que los valores no sean negativos
         totalCurso = Math.Max(totalCurso, 0);
         totalPractica = Math.Max(totalPractica, 0);
 
-        // 🔹 1. Agregar el pago de matrícula como primer concepto 🔹
-        detalles.Add(new PagoDetalle
+        // 🔹 1. Matrícula
+        if (curso.MontoMatricula > 0)
         {
-            Concepto = $"Matrícula - {curso.Nombre}",
-            Monto = curso.MontoMatricula,
-            FechaVencimiento = fechaInscripcion, // La matrícula vence el mismo día de la inscripción
-            Estado = "Pendiente"
-        });
+            detalles.Add(new PagoDetalle
+            {
+                Concepto = $"Matrícula - {curso.Nombre}",
+                Monto = curso.MontoMatricula,
+                FechaVencimiento = fechaVencimientoMatricula,
+                Estado = "Pendiente"
+            });
+        }
 
-        // 🔹 2. Generar las cuotas del curso y las cuotas de práctica en paralelo 🔹
+        // 🔹 2. Cuotas
         decimal montoPorCuota = totalCurso / curso.CantidadCuota;
         decimal montoPorPractica = (curso.TienePractica == 'S') ? totalPractica / curso.CantidadCuota : 0;
 
         for (int i = 1; i <= curso.CantidadCuota; i++)
         {
-            // Cuota del curso
-            detalles.Add(new PagoDetalle
+            if (montoPorCuota > 0)
             {
-                Concepto = $"Cuota {i} - {curso.Nombre}",
-                Monto = montoPorCuota,
-                FechaVencimiento = fechaVencimiento,
-                Estado = "Pendiente"
-            });
+                detalles.Add(new PagoDetalle
+                {
+                    Concepto = $"Cuota {i} - {curso.Nombre}",
+                    Monto = montoPorCuota,
+                    FechaVencimiento = fechaVencimientoCuotas,
+                    Estado = "Pendiente"
+                });
+            }
 
-            // Cuota de práctica (se genera junto con la cuota del curso)
             if (curso.TienePractica == 'S' && montoPorPractica > 0)
             {
                 detalles.Add(new PagoDetalle
                 {
                     Concepto = $"Práctica {i} - {curso.Nombre}",
                     Monto = montoPorPractica,
-                    FechaVencimiento = fechaVencimiento,
+                    FechaVencimiento = fechaVencimientoCuotas,
                     Estado = "Pendiente"
                 });
             }
 
-            fechaVencimiento = fechaVencimiento.AddMonths(1); // Se avanza un mes para la siguiente cuota
+            fechaVencimientoCuotas = fechaVencimientoCuotas.AddMonths(1); // Avanza un mes desde los 30 días
         }
 
-        // 🔹 3. Insertar pago en la base de datos 🔹
+        // 🔹 3. Encabezado
         PagoEncabezado pagoEncabezado = new PagoEncabezado
         {
             IdInscripcion = idInscripcion,
             Total = detalles.Sum(d => d.Monto),
-            TipoCuenta = "Credito", // Se asume que es crédito hasta que se pague
+            TipoCuenta = "Credito",
             Descuento = montoDescuento + montoDescuentoPractica,
             Observacion = $"Generación de pagos por inscripción - {curso.Nombre}"
         };
@@ -121,6 +131,7 @@ public class InscripcionesService : IInscripcionesService
         await _pagosRepository.InsertarPagoConDetalles(pagoEncabezado, detalles);
         _logger.LogInformation("Pagos generados exitosamente para la inscripción ID: {IdInscripcion}", idInscripcion);
     }
+
 
 
     public async Task<int> Actualizar(int idInscripcion, InscripcionRequest request)
@@ -142,10 +153,18 @@ public class InscripcionesService : IInscripcionesService
         return inscripcion != null ? _mapper.Map<InscripcionResponse>(inscripcion) : null;
     }
 
-    public async Task<IEnumerable<InscripcionResponse>> ObtenerTodas()
+    public async Task<IEnumerable<InscripcionDetalleDto>> ObtenerTodas(InscripcionFiltroRequest filtro)
     {
-        var inscripciones = await _repository.ObtenerTodas();
-        return _mapper.Map<IEnumerable<InscripcionResponse>>(inscripciones);
+        return await _repository.ObtenerTodas(filtro);
     }
 
+    public async Task<IEnumerable<EstudianteDto>> ObtenerEstudiantes(string? search)
+    {
+        return await _repository.ObtenerEstudiantes(search);
+    }
+
+    public async Task<IEnumerable<CursosInscripcionDto>> ObtenerCursos(string? search)
+    {
+        return await _repository.ObtenerCursos(search);
+    }
 }
