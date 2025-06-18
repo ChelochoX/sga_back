@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
@@ -55,21 +56,6 @@ public class CajaRepository : ICajaRepository
             throw new RepositoryException("No se pudieron obtener los movimientos.");
         }
     }
-
-    public async Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones()
-    {
-        try
-        {
-            var sql = "SELECT * FROM CajaAnulaciones ORDER BY FechaAnulacion DESC";
-            return await _conexion.QueryAsync<CajaAnulacion>(sql);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener anulaciones de caja.");
-            throw new RepositoryException("No se pudieron obtener las anulaciones.");
-        }
-    }
-
     public async Task InsertarMovimiento(CajaMovimiento movimiento)
     {
         try
@@ -114,5 +100,38 @@ public class CajaRepository : ICajaRepository
             throw new RepositoryException("Error al anular el movimiento.", ex);
         }
     }
+
+    public async Task<IEnumerable<CajaAnulacionDto>> ObtenerAnulaciones(DateTime? desde, DateTime? hasta)
+    {
+        try
+        {
+            _logger.LogInformation("Obteniendo anulaciones de caja. Filtros: Desde = {Desde}, Hasta = {Hasta}", desde, hasta);
+
+            var sql = @"
+            SELECT 
+                IdAnulacion,
+                IdMovimiento,
+                Motivo,
+                UsuarioAnulacion,
+                FechaAnulacion
+            FROM CajaAnulaciones
+            WHERE 
+                (@Desde IS NULL OR FechaAnulacion >= @Desde)
+                AND (@Hasta IS NULL OR FechaAnulacion < DATEADD(DAY, 1, @Hasta))
+            ORDER BY FechaAnulacion DESC;";
+
+            var result = await _conexion.QueryAsync<CajaAnulacionDto>(sql, new { Desde = desde, Hasta = hasta });
+
+            _logger.LogInformation("Se obtuvieron {Cantidad} anulaciones de caja.", result.Count());
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener anulaciones de caja.");
+            throw new RepositoryException("Error al obtener las anulaciones de caja.");
+        }
+    }
+
+
 
 }
