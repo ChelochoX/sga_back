@@ -6,6 +6,7 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+//[Authorize]
 public class RolesController : ControllerBase
 {
     private readonly IRolesService _service;
