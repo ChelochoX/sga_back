@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using sga_back.Middlewares.Filters;
 using sga_back.Request;
 using sga_back.Services.Interfaces;
 
@@ -6,6 +8,7 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PersonasController : ControllerBase
 {
     private readonly IPersonasService _service;
@@ -39,6 +42,7 @@ public class PersonasController : ControllerBase
     }
 
     [HttpGet]
+    [PermisoRequerido("Personas", "Consultar")]
     public async Task<IActionResult> ObtenerPersonas(string? filtro = null, int pageNumber = 1, int pageSize = 10)
     {
         var (personas, total) = await _service.ObtenerPersonas(filtro, pageNumber, pageSize);
