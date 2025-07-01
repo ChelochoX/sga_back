@@ -12,8 +12,5 @@ public interface IRolesRepository
     Task<IEnumerable<int>> ObtenerIdsRolesPorUsuario(string nombreUsuario);
     Task AsignarRolAUsuario(string nombreUsuario, int idRol);
     Task RemoverRolDeUsuario(string nombreUsuario, int idRol);
-    Task<string> ObtenerNombreRolPorId(int idRol);
-    Task EliminarPermisosDeRol(int idRol);
-    Task InsertarPermisosPredefinidos(int idRol, string nombreRol);
 
 }

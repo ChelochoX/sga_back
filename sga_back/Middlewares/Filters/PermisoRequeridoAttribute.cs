@@ -4,23 +4,15 @@ using sga_back.Services.Interfaces;
 
 namespace sga_back.Middlewares.Filters;
 
-/// <summary>
-/// Filtro que valida si el usuario autenticado tiene permisos para acceder a una acción específica de una entidad.
-/// </summary>
 public class PermisoRequeridoAttribute : Attribute, IAsyncActionFilter
 {
     private readonly string _entidad;
     private readonly string _recurso;
 
-    /// <summary>
-    /// Constructor del atributo.
-    /// </summary>
-    /// <param name="entidad">Nombre de la entidad (ej: "Inscripciones")</param>
-    /// <param name="recurso">Nombre del recurso/acción (ej: "Crear")</param>
-    public PermisoRequeridoAttribute(string entidad, string recurso)
+    public PermisoRequeridoAttribute(string recurso, string entidad)
     {
-        _entidad = entidad;
         _recurso = recurso;
+        _entidad = entidad;
     }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -31,10 +23,12 @@ public class PermisoRequeridoAttribute : Attribute, IAsyncActionFilter
 
         try
         {
-            // Verificar si el usuario está autenticado
+            logger.LogInformation("🔎 Header Authorization recibido: {AuthHeader}",
+                httpContext.Request.Headers["Authorization"].ToString());
+
             if (!user.Identity?.IsAuthenticated ?? true)
             {
-                logger.LogWarning("🔒 Usuario no autenticado.");
+                logger.LogWarning("Acceso no autorizado: el usuario no está autenticado.");
                 context.Result = new UnauthorizedObjectResult(new
                 {
                     Message = "No estás autenticado para acceder a este recurso."
@@ -42,11 +36,10 @@ public class PermisoRequeridoAttribute : Attribute, IAsyncActionFilter
                 return;
             }
 
-            // Obtener ID del usuario desde el token
             var idUsuarioClaim = user.FindFirst("id_usuario")?.Value;
             if (string.IsNullOrEmpty(idUsuarioClaim) || !int.TryParse(idUsuarioClaim, out int idUsuario))
             {
-                logger.LogWarning("⚠️ Token sin ID de usuario válido.");
+                logger.LogWarning("Acceso no autorizado: el token no contiene un ID de usuario válido.");
                 context.Result = new UnauthorizedObjectResult(new
                 {
                     Message = "No se pudo identificar al usuario en el token."
@@ -54,13 +47,12 @@ public class PermisoRequeridoAttribute : Attribute, IAsyncActionFilter
                 return;
             }
 
-            // Validar si tiene el permiso correspondiente
             var permisoService = httpContext.RequestServices.GetRequiredService<IPermisosService>();
             var tienePermiso = await permisoService.TienePermiso(idUsuario, _entidad, _recurso);
 
             if (!tienePermiso)
             {
-                logger.LogWarning("⛔ Permiso denegado: Usuario {IdUsuario} intentó '{Recurso}' sobre '{Entidad}' sin permiso.",
+                logger.LogWarning("Permiso denegado: Usuario {IdUsuario} intentó realizar '{Recurso}' sobre '{Entidad}' sin permiso.",
                     idUsuario, _recurso, _entidad);
 
                 context.Result = new ObjectResult(new
@@ -75,19 +67,19 @@ public class PermisoRequeridoAttribute : Attribute, IAsyncActionFilter
             }
 
             // Permiso concedido
-            logger.LogInformation("✅ Permiso concedido: Usuario {IdUsuario} puede realizar '{Recurso}' sobre '{Entidad}'.",
+            logger.LogInformation("Permiso concedido: Usuario {IdUsuario} puede realizar '{Recurso}' sobre '{Entidad}'.",
                 idUsuario, _recurso, _entidad);
 
             await next();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "❌ Error al validar permiso para '{Recurso}' sobre '{Entidad}'.", _recurso, _entidad);
+            logger.LogError(ex, "Error inesperado al validar permiso para la acción '{Recurso}' sobre '{Entidad}'.", _recurso, _entidad);
 
             context.Result = new ObjectResult(new
             {
                 Message = "Ocurrió un error inesperado al verificar permisos.",
-                Error = ex.Message // ⚠️ Podés ocultar este detalle en producción
+                Error = ex.Message // ⚠️ Podés omitir esto en producción si querés ocultar detalles
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

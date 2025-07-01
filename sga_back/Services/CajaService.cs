@@ -1,5 +1,4 @@
 ﻿using sga_back.Common;
-using sga_back.DTOs;
 using sga_back.Models;
 using sga_back.Repositories.Interfaces;
 using sga_back.Services.Interfaces;
@@ -30,8 +29,4 @@ public class CajaService : ICajaService
         await _repository.AnularMovimientoCaja(idMovimiento, motivo, usuario);
     }
 
-    public async Task<IEnumerable<CajaAnulacionDto>> ObtenerAnulaciones(DateTime? desde, DateTime? hasta)
-    {
-        return await _repository.ObtenerAnulaciones(desde, hasta);
-    }
 }

@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using sga_back.Common;
 using sga_back.DTOs;
 using sga_back.Exceptions;
 using sga_back.Models;
@@ -181,61 +180,6 @@ public class RolesRepository : IRolesRepository
         {
             _logger.LogError(ex, "Error al remover el rol {IdRol} del usuario {NombreUsuario}", idRol, nombreUsuario);
             throw new RepositoryException($"No se pudo remover el rol {idRol} del usuario {nombreUsuario}", ex);
-        }
-    }
-
-    public async Task<string> ObtenerNombreRolPorId(int idRol)
-    {
-        try
-        {
-            var sql = "SELECT nombre_rol FROM Roles WHERE id_rol = @idRol";
-            return await _conexion.QueryFirstOrDefaultAsync<string>(sql, new { idRol });
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al eliminar roles del rol {IdRol}", idRol);
-            throw new RepositoryException($"No se pudo eliminar los permisos del rol {idRol}", ex);
-        }
-    }
-
-    public async Task EliminarPermisosDeRol(int idRol)
-    {
-        try
-        {
-            const string sql = @"DELETE FROM Permisos WHERE id_rol = @idRol";
-            await _conexion.ExecuteAsync(sql, new { idRol });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al eliminar los permisos del rol {IdRol}", idRol);
-            throw new RepositoryException($"No se pudo eliminar los permisos del rol {idRol}", ex);
-        }
-    }
-
-    public async Task InsertarPermisosPredefinidos(int idRol, string nombreRol)
-    {
-        try
-        {
-            var permisos = PermisosPredefinidosProvider.ObtenerPorRol(nombreRol);
-
-            foreach (var (entidad, recurso) in permisos)
-            {
-                var sql = @"
-                INSERT INTO Permisos (id_rol, id_entidad, id_recurso)
-                SELECT @idRol, e.id_entidad, r.id_recurso
-                FROM Entidades e, Recursos r
-                WHERE e.nombre_entidad = @entidad AND r.nombre_recurso = @recurso";
-
-                await _conexion.ExecuteAsync(sql, new { idRol, entidad, recurso });
-            }
-
-            _logger.LogInformation("Permisos predefinidos insertados para el rol {IdRol} - {NombreRol}", idRol, nombreRol);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al insertar permisos predefinidos para el rol {IdRol}", idRol);
-            throw new RepositoryException($"No se pudieron insertar permisos predefinidos para el rol {idRol}", ex);
         }
     }
 

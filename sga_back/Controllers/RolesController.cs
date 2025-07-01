@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using sga_back.DTOs;
 using sga_back.Services.Interfaces;
 
@@ -7,7 +6,6 @@ namespace sga_back.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class RolesController : ControllerBase
 {
     private readonly IRolesService _service;
