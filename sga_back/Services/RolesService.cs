@@ -38,15 +38,24 @@ public class RolesService : IRolesService
             var rolesAAsignar = nuevosIdsRoles.Except(rolesActuales).ToList();
             var rolesARemover = rolesActuales.Except(nuevosIdsRoles).ToList();
 
-            foreach (var idRol in rolesAAsignar.Where(r => r > 0))
-            {
-                await _repository.AsignarRolAUsuario(nombreUsuario, idRol);
-            }
-
             foreach (var idRol in rolesARemover)
             {
                 await _repository.RemoverRolDeUsuario(nombreUsuario, idRol);
             }
+
+            foreach (var idRol in rolesAAsignar.Where(r => r > 0))
+            {
+                await _repository.AsignarRolAUsuario(nombreUsuario, idRol);
+
+                var nombreRol = await _repository.ObtenerNombreRolPorId(idRol);
+
+                // Eliminar permisos anteriores del rol
+                await _repository.EliminarPermisosDeRol(idRol);
+
+                // Insertar permisos predefinidos para ese rol
+                await _repository.InsertarPermisosPredefinidos(idRol, nombreRol);
+            }
+
 
             _logger.LogInformation("Roles actualizados para el usuario {NombreUsuario}", nombreUsuario);
         }
