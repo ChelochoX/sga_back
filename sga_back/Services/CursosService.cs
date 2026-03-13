@@ -95,9 +95,6 @@ public class CursosService : ICursosService
 
         return await _repository.ObtenerCursosPorFecha(request);
 
-
-
-
     }
 
     public async Task CambiarEstado(int idCurso, bool activo)
