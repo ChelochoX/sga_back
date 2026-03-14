@@ -23,6 +23,11 @@ public class CajaService : ICajaService
         return await _repository.ObtenerMovimientos(fechaInicio, fechaFin);
     }
 
+    public async Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones(DateTime? fechaInicio, DateTime? fechaFin)
+    {
+        return await _repository.ObtenerAnulaciones(fechaInicio, fechaFin);
+    }
+
     public async Task AnularMovimientoCaja(int idMovimiento, string motivo)
     {
         string usuario = _userContext.NombreUsuario;

@@ -19,13 +19,12 @@ public class CajaController : ControllerBase
         _logger = logger;
     }
 
-    //[HttpGet("anulaciones")]
-    //public async Task<IActionResult> GetAnulaciones()
-    //{
-    //    var result = await _service.ObtenerAnulaciones();
-    //    return Ok(result);
-
-    //}
+    [HttpGet("anulaciones")]
+    public async Task<IActionResult> GetAnulaciones([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
+    {
+        var result = await _service.ObtenerAnulaciones(desde, hasta);
+        return Ok(result);
+    }
 
     [HttpGet("movimientos")]
     public async Task<IActionResult> GetMovimientos([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)

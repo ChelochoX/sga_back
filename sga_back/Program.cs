@@ -1,4 +1,5 @@
-﻿using sga_back.Configurations;
+﻿using Microsoft.OpenApi;
+using sga_back.Configurations;
 using sga_back.Middlewares;
 
 string environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
@@ -28,22 +29,24 @@ builder.Services.AddRepositories();
 builder.Services.AddServices();
 builder.Services.AddControllers();
 builder.Services.AddConfiguration(configuration);
+builder.Services.AddPdfGeneration(configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Documentacion API Sistema de Gestion Academica",
         Version = "v1",
         Description = "REST API de Sistema de Gestion Academica"
     });
-    c.EnableAnnotations();
 
+    c.EnableAnnotations();
 
     string xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     c.IncludeXmlComments(xmlPath);
 });
+
 
 WebApplication app = builder.Build();
 

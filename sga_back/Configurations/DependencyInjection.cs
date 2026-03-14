@@ -20,6 +20,7 @@ public static class DependencyInjection
         _ = services.AddScoped<IPagosRepository, PagosRepository>();
         _ = services.AddScoped<IPermisosRepository, PermisosRepository>();
         _ = services.AddScoped<ICajaRepository, CajaRepository>();
+        _ = services.AddScoped<IFacturaPdfRepository, FacturaPdfRepository>();
         return services;
     }
 
@@ -35,6 +36,7 @@ public static class DependencyInjection
         _ = services.AddScoped<IPagosService, PagosService>();
         _ = services.AddScoped<IPermisosService, PermisosService>();
         _ = services.AddScoped<ICajaService, CajaService>();
+        _ = services.AddScoped<IFacturaPdfService, FacturaPdfService>();
         return services;
     }
 }

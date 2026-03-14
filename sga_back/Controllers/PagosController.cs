@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using sga_back.Common;
 using sga_back.Request;
+using sga_back.Response;
 using sga_back.Services.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -116,11 +117,17 @@ public class PagosController : ControllerBase
     [SwaggerOperation(Summary = "Registra una factura contado y actualiza la cuenta corriente")]
     public async Task<IActionResult> RegistrarFactura([FromBody] FacturaContadoRequest request)
     {
-        //Obtenemos los datos del usuario
         request.UsuarioRegistro = _userContext.NombreUsuario;
 
-        await _service.RegistrarFactura(request);
-        return Ok(new { message = "Factura registrada con éxito" });
+        int idFactura = await _service.RegistrarFactura(request);
+
+        var response = new RegistrarFacturaResponse
+        {
+            Mensaje = "Factura registrada con éxito",
+            IdFactura = idFactura
+        };
+
+        return Ok(response);
     }
 
 

@@ -56,12 +56,37 @@ public class CajaRepository : ICajaRepository
         }
     }
 
-    public async Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones()
+    public async Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones(DateTime? fechaInicio, DateTime? fechaFin)
     {
         try
         {
-            var sql = "SELECT * FROM CajaAnulaciones ORDER BY FechaAnulacion DESC";
-            return await _conexion.QueryAsync<CajaAnulacion>(sql);
+            _logger.LogInformation(
+                "Obteniendo anulaciones de caja con parámetros: FechaInicio={FechaInicio}, FechaFin={FechaFin}",
+                fechaInicio, fechaFin);
+
+            DateTime desde = fechaInicio?.Date ?? DateTime.Today;
+            DateTime hasta = fechaFin?.Date ?? DateTime.Today;
+
+            var sql = @"
+                SELECT
+                    IdAnulacion AS IdAnulacion,
+                    IdMovimiento AS IdMovimiento,
+                    Motivo AS Motivo,
+                    UsuarioAnulacion AS UsuarioAnulacion,
+                    FechaAnulacion AS FechaAnulacion
+                FROM CajaAnulaciones
+                WHERE CAST(FechaAnulacion AS DATE) BETWEEN @Desde AND @Hasta
+                ORDER BY FechaAnulacion DESC;";
+
+            var anulaciones = await _conexion.QueryAsync<CajaAnulacion>(sql, new
+            {
+                Desde = desde,
+                Hasta = hasta
+            });
+
+            _logger.LogInformation("Se recuperaron {Cantidad} anulaciones de caja.", anulaciones.Count());
+
+            return anulaciones;
         }
         catch (Exception ex)
         {
@@ -104,7 +129,12 @@ public class CajaRepository : ICajaRepository
         {
             await _conexion.ExecuteAsync(
                 "sp_AnularMovimientoCaja",
-                new { IdMovimiento = idMovimiento, Motivo = motivo, UsuarioAnulacion = usuario },
+                new
+                {
+                    IdMovimiento = idMovimiento,
+                    Motivo = motivo,
+                    UsuarioAnulacion = usuario
+                },
                 commandType: CommandType.StoredProcedure
             );
         }
@@ -114,5 +144,6 @@ public class CajaRepository : ICajaRepository
             throw new RepositoryException("Error al anular el movimiento.", ex);
         }
     }
+
 
 }

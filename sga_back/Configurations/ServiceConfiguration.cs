@@ -60,7 +60,7 @@ public static class ServiceConfiguration
             });
 
         // Registro de AutoMapper
-        services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+        services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
 
         // Registro de validadores con FluentValidation
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());

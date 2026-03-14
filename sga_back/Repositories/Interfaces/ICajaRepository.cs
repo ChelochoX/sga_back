@@ -5,7 +5,7 @@ namespace sga_back.Repositories.Interfaces;
 public interface ICajaRepository
 {
     Task<IEnumerable<CajaMovimiento>> ObtenerMovimientos(DateTime? fechaInicio, DateTime? fechaFin);
-    Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones();
+    Task<IEnumerable<CajaAnulacion>> ObtenerAnulaciones(DateTime? fechaInicio, DateTime? fechaFin);
     Task InsertarMovimiento(CajaMovimiento movimiento);
     Task AnularMovimientoCaja(int idMovimiento, string motivo, string usuario);
 }
