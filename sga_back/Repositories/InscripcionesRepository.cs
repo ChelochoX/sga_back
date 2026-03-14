@@ -268,11 +268,11 @@ public class InscripcionesRepository : IInscripcionesRepository
                    OR p.apellidos LIKE '%' + @Search + '%')
             ORDER BY p.nombres, p.apellidos;";
 
-            // 📝 Parametrización segura
+            //Parametrización segura
             var param = new
             {
                 Rol = "Estudiante",
-                Search = filtro                 // ← NULL = trae todo
+                Search = filtro
             };
 
             return await _conexion.QueryAsync<EstudianteDto>(sql, param);

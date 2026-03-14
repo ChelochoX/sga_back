@@ -15,6 +15,7 @@ public class CursoRequest
     public required decimal CostoPractica { get; set; }
     public required DateTime FechaInicio { get; set; }
     public required DateTime FechaFin { get; set; }
+    public required bool Activo { get; set; }
 }
 public class CursoRequestValidator : AbstractValidator<CursoRequest>
 {

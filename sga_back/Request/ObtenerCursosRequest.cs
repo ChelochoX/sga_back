@@ -4,16 +4,15 @@ namespace sga_back.Request;
 
 public class ObtenerCursosRequest
 {
-    public DateTime FechaInicio { get; set; }
+    public DateTime? FechaInicio { get; set; }
     public DateTime? FechaFin { get; set; }
+    public bool? Activo { get; set; }
 }
 
 public class ObtenerCursosRequestValidator : AbstractValidator<ObtenerCursosRequest>
 {
     public ObtenerCursosRequestValidator()
     {
-        RuleFor(x => x.FechaInicio)
-            .NotEmpty().WithMessage("La fecha de inicio es obligatoria.");
 
         RuleFor(x => x.FechaFin)
             .GreaterThanOrEqualTo(x => x.FechaInicio)

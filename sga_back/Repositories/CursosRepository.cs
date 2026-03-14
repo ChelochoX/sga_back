@@ -50,11 +50,21 @@ public class CursosRepository : ICursosRepository
             _logger.LogInformation("Intentando actualizar curso con ID: {IdCurso}", curso.IdCurso);
 
             string query = @"
-            UPDATE Cursos
-            SET nombre = @Nombre, descripcion = @Descripcion, duracion = @Duracion, unidad_duracion = @UnidadDuracion, 
-                cantidad_cuota = @CantidadCuota, monto_matricula = @MontoMatricula, monto_cuota = @MontoCuota, 
-                tiene_practica = @TienePractica, costo_practica = @CostoPractica, fecha_inicio = @FechaInicio, fecha_fin = @FechaFin
-            WHERE id_curso = @IdCurso";
+                UPDATE Cursos
+                SET nombre = @Nombre,
+                    descripcion = @Descripcion,
+                    duracion = @Duracion,
+                    unidad_duracion = @UnidadDuracion,
+                    cantidad_cuota = @CantidadCuota,
+                    monto_matricula = @MontoMatricula,
+                    monto_cuota = @MontoCuota,
+                    tiene_practica = @TienePractica,
+                    costo_practica = @CostoPractica,
+                    fecha_inicio = @FechaInicio,
+                    fecha_fin = @FechaFin,
+                    activo = @Activo
+                WHERE id_curso = @IdCurso";
+
 
             int filasAfectadas = await _conexion.ExecuteAsync(query, curso);
 
@@ -167,16 +177,19 @@ public class CursosRepository : ICursosRepository
             WHERE 
                 (@FechaInicio IS NULL OR fecha_inicio >= @FechaInicio)
                 AND (@FechaFin IS NULL OR fecha_inicio <= @FechaFin)
+                AND (@Activo IS NULL OR activo = @Activo)
             ORDER BY fecha_inicio DESC
         ";
 
             var cursos = await _conexion.QueryAsync<CursoDto>(query, new
             {
                 FechaInicio = request.FechaInicio,
-                FechaFin = request.FechaFin
+                FechaFin = request.FechaFin,
+                request.Activo
             });
 
             _logger.LogInformation("Se obtuvieron {Cantidad} cursos.", cursos.Count());
+
             return cursos;
         }
         catch (Exception ex)
