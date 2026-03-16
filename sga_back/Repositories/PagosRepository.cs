@@ -185,72 +185,73 @@ public class PagosRepository : IPagosRepository
         {
             _logger.LogInformation("Obteniendo pagos PENDIENTES agrupados con filtros: {@Filtro}", filtro);
 
+            int pageNumber = filtro?.PageNumber > 0 ? filtro.PageNumber : 1;
+            int pageSize = filtro?.PageSize > 0 ? filtro.PageSize : 10;
+            int offset = (pageNumber - 1) * pageSize;
+
             var sql = @"
-        SELECT 
-            pe.id_pago AS IdPago,
-            pe.id_inscripcion AS IdInscripcion,
-            per.nombres + ' ' + per.apellidos AS NombreEstudiante,
-            cu.nombre AS NombreCurso,
-            per.direccion AS DireccionEstudiante,
-	        CASE 
-		    WHEN per.ruc = 'S' THEN CONCAT(per.cedula, '-', per.digito_verificador)
-		    ELSE per.cedula
-	        END AS RucEstudiante,
-	        per.telefono As TelefonoEstudiante,
-            COALESCE(pe.total, 0) AS DeudaTotal,
-            pe.tipo_cuenta AS TipoCuenta,
-            COALESCE(pe.descuento, 0) AS DescuentoCabecera,
-            pe.observacion AS Observacion,
-            pd.id_detalle AS IdDetallePago,
-            pd.concepto AS Concepto,
-            COALESCE(pd.monto, 0) AS Monto,
-            pd.fecha_vencimiento AS FechaVencimiento,
-            pd.fecha_pago AS FechaPago,
-            pd.tipo_pago AS TipoPago,
-            pd.estado AS Estado
+                SELECT 
+                    pe.id_pago AS IdPago,
+                    pe.id_inscripcion AS IdInscripcion,
+                    per.nombres + ' ' + per.apellidos AS NombreEstudiante,
+                    cu.nombre AS NombreCurso,
+                    per.direccion AS DireccionEstudiante,
+                    CASE 
+                        WHEN per.ruc = 'S' THEN CONCAT(per.cedula, '-', per.digito_verificador)
+                        ELSE per.cedula
+                    END AS RucEstudiante,
+                    per.telefono As TelefonoEstudiante,
+                    COALESCE(pe.total, 0) AS DeudaTotal,
+                    pe.tipo_cuenta AS TipoCuenta,
+                    COALESCE(pe.descuento, 0) AS DescuentoCabecera,
+                    pe.observacion AS Observacion,
+                    pd.id_detalle AS IdDetallePago,
+                    pd.concepto AS Concepto,
+                    COALESCE(pd.monto, 0) AS Monto,
+                    pd.fecha_vencimiento AS FechaVencimiento,
+                    pd.fecha_pago AS FechaPago,
+                    pd.tipo_pago AS TipoPago,
+                    pd.estado AS Estado
+                FROM Pagos_Encabezado pe
+                JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+                JOIN Personas per ON per.id_persona = i.id_persona
+                JOIN Cursos cu ON cu.id_curso = i.id_curso
+                LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+                WHERE
+                    (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+                    AND (@FechaVencimiento IS NULL OR CONVERT(DATE, pd.fecha_vencimiento) = @FechaVencimiento)
+                    AND pd.estado = 'Pendiente'
+                ORDER BY pe.id_pago, pd.fecha_vencimiento
+                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
-        FROM Pagos_Encabezado pe
-        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
-        JOIN Personas per ON per.id_persona = i.id_persona
-        JOIN Cursos cu ON cu.id_curso = i.id_curso -- si quieres el nombre del curso
-        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
-        WHERE
-            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
-            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
-            AND pd.estado = 'Pendiente'
-        ORDER BY
-            pe.id_pago, pd.fecha_vencimiento
-        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
-        ";
-
-            // (Total igual que antes)
             var sqlTotal = @"
-        SELECT COUNT(DISTINCT pe.id_pago)
-        FROM Pagos_Encabezado pe
-        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
-        JOIN Personas per ON per.id_persona = i.id_persona
-        JOIN Cursos cu ON cu.id_curso = i.id_curso
-        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
-        WHERE
-            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
-            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
-            AND pd.estado = 'Pendiente'
-        ";
-
-            int offset = (filtro.PageNumber - 1) * filtro.PageSize;
+                SELECT COUNT(DISTINCT pe.id_pago)
+                FROM Pagos_Encabezado pe
+                JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+                JOIN Personas per ON per.id_persona = i.id_persona
+                JOIN Cursos cu ON cu.id_curso = i.id_curso
+                LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+                WHERE
+                    (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+                    AND (@FechaVencimiento IS NULL OR CONVERT(DATE, pd.fecha_vencimiento) = @FechaVencimiento)
+                    AND pd.estado = 'Pendiente';";
 
             var parametros = new
             {
                 NombreEstudiante = string.IsNullOrWhiteSpace(filtro?.NombreEstudiante) ? null : filtro.NombreEstudiante,
-                FechaVencimiento = filtro?.FechaVencimiento,
+                FechaVencimiento = filtro?.FechaVencimiento?.Date,
                 Offset = offset,
-                PageSize = filtro.PageSize
+                PageSize = pageSize
             };
 
-            // Traemos todos los resultados en plano
             var rows = (await _conexion.QueryAsync<dynamic>(sql, parametros)).ToList();
 
-            // Agrupamos en C#
+            if (!rows.Any())
+            {
+                _logger.LogInformation("No se encontraron pagos pendientes para los filtros enviados.");
+                return (Enumerable.Empty<PagoCabeceraDto>(), 0);
+            }
+
             var agrupado = rows
                 .GroupBy(r => new
                 {
@@ -289,7 +290,7 @@ public class PagosRepository : IPagosRepository
                             FechaVencimiento = x.FechaVencimiento,
                             FechaPago = x.FechaPago,
                             TipoPago = x.TipoPago,
-                            Estado = x.Estado,
+                            Estado = x.Estado
                         }).ToList()
                 }).ToList();
 
@@ -310,66 +311,81 @@ public class PagosRepository : IPagosRepository
         {
             _logger.LogInformation("Obteniendo pagos REALIZADOS agrupados con filtros: {@Filtro}", filtro);
 
+            int pageNumber = filtro?.PageNumber > 0 ? filtro.PageNumber : 1;
+            int pageSize = filtro?.PageSize > 0 ? filtro.PageSize : 10;
+            int offset = (pageNumber - 1) * pageSize;
+
             var sql = @"
-        SELECT 
-            pe.id_pago AS IdPago,
-            pe.id_inscripcion AS IdInscripcion,
-            per.nombres + ' ' + per.apellidos AS NombreEstudiante,
-            cu.nombre AS NombreCurso,
-            COALESCE(pe.total, 0) AS DeudaTotal,
-            pe.tipo_cuenta AS TipoCuenta,
-            COALESCE(pe.descuento, 0) AS DescuentoCabecera,
-            pe.observacion AS Observacion,
-            pd.id_detalle AS IdDetallePago,
-            pd.concepto AS Concepto,
-            COALESCE(pd.monto, 0) AS Monto,
-            pd.fecha_vencimiento AS FechaVencimiento,
-            pd.fecha_pago AS FechaPago,
-            pd.tipo_pago AS TipoPago,
-            pd.estado AS Estado
+                SELECT 
+                    pe.id_pago AS IdPago,
+                    pe.id_inscripcion AS IdInscripcion,
+                    per.nombres + ' ' + per.apellidos AS NombreEstudiante,
+                    cu.nombre AS NombreCurso,
+                    COALESCE(pe.total, 0) AS DeudaTotal,
+                    pe.tipo_cuenta AS TipoCuenta,
+                    COALESCE(pe.descuento, 0) AS DescuentoCabecera,
+                    pe.observacion AS Observacion,
+                    pd.id_detalle AS IdDetallePago,
+                    pd.concepto AS Concepto,
+                    COALESCE(pd.monto, 0) AS Monto,
+                    pd.fecha_vencimiento AS FechaVencimiento,
+                    pd.fecha_pago AS FechaPago,
+                    pd.tipo_pago AS TipoPago,
+                    pd.estado AS Estado
 
-        FROM Pagos_Encabezado pe
-        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
-        JOIN Personas per ON per.id_persona = i.id_persona
-        JOIN Cursos cu ON cu.id_curso = i.id_curso -- si quieres el nombre del curso
-        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
-        WHERE
-            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
-            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
-            AND pd.estado = 'Pagado'
-        ORDER BY
-            pe.id_pago, pd.fecha_vencimiento
-        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
-        ";
+                FROM Pagos_Encabezado pe
+                JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+                JOIN Personas per ON per.id_persona = i.id_persona
+                JOIN Cursos cu ON cu.id_curso = i.id_curso
+                LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+                WHERE
+                    (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+                    AND (@FechaVencimiento IS NULL OR CONVERT(DATE, pd.fecha_vencimiento) = @FechaVencimiento)
+                    AND pd.estado = 'Pagado'
+                ORDER BY
+                    pe.id_pago, pd.fecha_vencimiento
+                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;";
 
-            // Para el total, cuenta cabeceras (pagos únicos)
             var sqlTotal = @"
-        SELECT COUNT(DISTINCT pe.id_pago)
-        FROM Pagos_Encabezado pe
-        JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
-        JOIN Personas per ON per.id_persona = i.id_persona
-        JOIN Cursos cu ON cu.id_curso = i.id_curso
-        LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
-        WHERE
-            (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
-            AND (@FechaVencimiento IS NULL OR pd.fecha_vencimiento = CONVERT(DATE, @FechaVencimiento, 23))
-            AND pd.estado = 'Pagado'
-        ";
-
-            int offset = (filtro.PageNumber - 1) * filtro.PageSize;
+                SELECT COUNT(DISTINCT pe.id_pago)
+                FROM Pagos_Encabezado pe
+                JOIN Inscripciones i ON i.id_inscripcion = pe.id_inscripcion
+                JOIN Personas per ON per.id_persona = i.id_persona
+                JOIN Cursos cu ON cu.id_curso = i.id_curso
+                LEFT JOIN Pagos_Detalle pd ON pd.id_pago = pe.id_pago
+                WHERE
+                    (@NombreEstudiante IS NULL OR (per.nombres + ' ' + per.apellidos) LIKE CONCAT('%', @NombreEstudiante, '%'))
+                    AND (@FechaVencimiento IS NULL OR CONVERT(DATE, pd.fecha_vencimiento) = @FechaVencimiento)
+                    AND pd.estado = 'Pagado';";
 
             var parametros = new
             {
                 NombreEstudiante = string.IsNullOrWhiteSpace(filtro?.NombreEstudiante) ? null : filtro.NombreEstudiante,
-                FechaVencimiento = filtro?.FechaVencimiento,
+                FechaVencimiento = filtro?.FechaVencimiento?.Date,
                 Offset = offset,
-                PageSize = filtro.PageSize
+                PageSize = pageSize
             };
 
             var rows = (await _conexion.QueryAsync<dynamic>(sql, parametros)).ToList();
 
+            if (!rows.Any())
+            {
+                _logger.LogInformation("No se encontraron pagos realizados para los filtros enviados.");
+                return (Enumerable.Empty<PagoCabeceraDto>(), 0);
+            }
+
             var agrupado = rows
-                .GroupBy(r => new { r.IdPago, r.IdInscripcion, r.NombreEstudiante, r.NombreCurso, r.DeudaTotal, r.TipoCuenta, r.DescuentoCabecera, r.Observacion })
+                .GroupBy(r => new
+                {
+                    r.IdPago,
+                    r.IdInscripcion,
+                    r.NombreEstudiante,
+                    r.NombreCurso,
+                    r.DeudaTotal,
+                    r.TipoCuenta,
+                    r.DescuentoCabecera,
+                    r.Observacion
+                })
                 .Select(g => new PagoCabeceraDto
                 {
                     IdPago = g.Key.IdPago,
@@ -390,10 +406,11 @@ public class PagosRepository : IPagosRepository
                             FechaVencimiento = x.FechaVencimiento,
                             FechaPago = x.FechaPago,
                             TipoPago = x.TipoPago,
-                            Estado = x.Estado,
-                            // otros campos...
-                        }).ToList()
-                }).ToList();
+                            Estado = x.Estado
+                        })
+                        .ToList()
+                })
+                .ToList();
 
             int total = await _conexion.ExecuteScalarAsync<int>(sqlTotal, parametros);
 
@@ -592,8 +609,6 @@ public class PagosRepository : IPagosRepository
                 _conexion.Close();
         }
     }
-
-
 
     public async Task<DocumentoFiscalConfigDto> ObtenerConfiguracionPorCodigoDocumento(string codigoDocumento)
     {

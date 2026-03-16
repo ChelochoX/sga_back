@@ -22,11 +22,6 @@ public class ErrorHandlingMiddleware
         try
         {
             await _next(context);
-
-            if (context.Response.StatusCode is 401 or 403)
-            {
-                throw new UnauthorizedAccessException();
-            }
         }
         catch (Exception ex)
         {
@@ -36,6 +31,11 @@ public class ErrorHandlingMiddleware
 
     private Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        if (context.Response.HasStarted)
+        {
+            return Task.CompletedTask;
+        }
+
         context.Response.ContentType = "application/json";
 
         Response<object> response = new()
@@ -45,7 +45,6 @@ public class ErrorHandlingMiddleware
             Errors = []
         };
 
-        // Definir el mensaje en función del ambiente
         bool showStackTrace = _env.IsDevelopment();
 
         switch (exception)
@@ -60,6 +59,13 @@ public class ErrorHandlingMiddleware
                 response.Errors.Add(invalidOperationException.Message);
                 break;
 
+            case UnauthorizedAccessException unauthorizedAccessException:
+                response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                response.Errors.Add(string.IsNullOrWhiteSpace(unauthorizedAccessException.Message)
+                    ? "No autorizado para acceder a este recurso."
+                    : unauthorizedAccessException.Message);
+                break;
+
             case RepositoryException repositoryException:
                 response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 response.Errors.Add(repositoryException.Message);
@@ -67,16 +73,15 @@ public class ErrorHandlingMiddleware
                 if (showStackTrace)
                 {
                     string? stackTrace = repositoryException.InnerException?.StackTrace;
-                    if (!string.IsNullOrEmpty(stackTrace))
+                    if (!string.IsNullOrWhiteSpace(stackTrace))
                     {
                         response.Errors.Add(stackTrace);
                     }
                 }
-
                 break;
 
-            case NoDataFoundException noDataFoundException:
-                response.StatusCode = (int)HttpStatusCode.NoContent;
+            case NoDataFoundException:
+                context.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 return Task.CompletedTask;
 
             case ReglasdeNegocioException reglasdeNegocioException:
@@ -99,6 +104,4 @@ public class ErrorHandlingMiddleware
         context.Response.StatusCode = response.StatusCode;
         return context.Response.WriteAsync(jsonResponse);
     }
-
 }
-
