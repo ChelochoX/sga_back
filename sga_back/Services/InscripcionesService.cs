@@ -41,98 +41,112 @@ public class InscripcionesService : IInscripcionesService
 
         Inscripcion inscripcion = _mapper.Map<Inscripcion>(request);
         var idInscripcion = await _repository.Insertar(inscripcion);
+
         inscripcion.FechaInscripcion = request.FechaInscripcion ?? DateTime.UtcNow;
 
-        // Obtener información del curso
-        Curso? curso = await _cursosRepository.ObtenerPorId(request.IdCurso);
+        // Ahora obtenemos el curso con el nuevo modelo
+        CursoDetalleDto? curso = await _cursosRepository.ObtenerDetallePorId(request.IdCurso);
         if (curso == null)
         {
             throw new ReglasdeNegocioException("El curso seleccionado no existe.");
         }
 
-        // Generar pagos asociados a la inscripción considerando los descuentos
-        await GenerarPagosPorInscripcion(idInscripcion, curso, request.MontoDescuento, request.MontoDescuentoPractica, inscripcion.FechaInscripcion);
+        // Generar pagos asociados a la inscripción considerando la nueva estructura
+        await GenerarPagosPorInscripcion(
+            idInscripcion,
+            curso,
+            request.MontoDescuento,
+            request.MontoDescuentoPractica,
+            request.MontoDescuentoMatricula,
+            inscripcion.FechaInscripcion);
 
         return idInscripcion;
     }
 
-    private async Task GenerarPagosPorInscripcion(int idInscripcion, Curso curso, decimal montoDescuento, decimal montoDescuentoPractica, DateTime fechaInscripcion)
+    private async Task GenerarPagosPorInscripcion(
+        int idInscripcion,
+        CursoDetalleDto curso,
+        decimal montoDescuento,
+        decimal montoDescuentoPractica,
+        decimal montoDescuentoMatricula,
+        DateTime fechaInscripcion)
     {
-        _logger.LogInformation("Generando pagos para la inscripción ID: {IdInscripcion}, Curso: {CursoNombre}", idInscripcion, curso.Nombre);
+        _logger.LogInformation(
+            "Generando pagos para la inscripción ID: {IdInscripcion}, Curso: {CursoNombre}",
+            idInscripcion,
+            curso.Nombre);
 
-        List<PagoDetalle> detalles = new List<PagoDetalle>();
+        List<PagoDetalle> detalles = new();
 
-        // 🔸 La matrícula se cobra en el mismo día de la inscripción
-        DateTime fechaVencimientoMatricula = fechaInscripcion;
-
-        // 🔸 Las cuotas comienzan a cobrarse a partir de 30 días después de la inscripción
-        DateTime fechaVencimientoCuotas = fechaInscripcion.AddDays(30);
-
-        // Aplicar descuentos antes de calcular las cuotas
-        decimal totalCurso = curso.MontoCuota * curso.CantidadCuota - montoDescuento;
-        decimal totalPractica = (curso.TienePractica == 'S') ? curso.CostoPractica * curso.CantidadCuota - montoDescuentoPractica : 0;
-
-        totalCurso = Math.Max(totalCurso, 0);
-        totalPractica = Math.Max(totalPractica, 0);
-
-        // 🔹 1. Matrícula
-        if (curso.MontoMatricula > 0)
+        if (curso.Conceptos == null || !curso.Conceptos.Any())
         {
-            detalles.Add(new PagoDetalle
-            {
-                Concepto = $"Matrícula - {curso.Nombre}",
-                Monto = curso.MontoMatricula,
-                FechaVencimiento = fechaVencimientoMatricula,
-                Estado = "Pendiente"
-            });
+            throw new ReglasdeNegocioException("El curso no tiene conceptos configurados.");
         }
 
-        // 🔹 2. Cuotas
-        decimal montoPorCuota = totalCurso / curso.CantidadCuota;
-        decimal montoPorPractica = (curso.TienePractica == 'S') ? totalPractica / curso.CantidadCuota : 0;
-
-        for (int i = 1; i <= curso.CantidadCuota; i++)
+        foreach (var concepto in curso.Conceptos.Where(x => x.Activo))
         {
-            if (montoPorCuota > 0)
+            if (concepto.Vencimientos == null || !concepto.Vencimientos.Any())
+                continue;
+
+            foreach (var vencimiento in concepto.Vencimientos
+                         .Where(v => v.Activo)
+                         .OrderBy(v => v.NroOrden))
             {
+                decimal monto = vencimiento.Monto;
+
+                // Aplicar descuentos según el tipo de concepto
+                if (string.Equals(concepto.TipoConcepto, "Matricula", StringComparison.OrdinalIgnoreCase))
+                {
+                    monto -= montoDescuentoMatricula;
+                }
+                else if (string.Equals(concepto.TipoConcepto, "Practica", StringComparison.OrdinalIgnoreCase))
+                {
+                    monto -= montoDescuentoPractica;
+                }
+                else if (string.Equals(concepto.TipoConcepto, "Cuota", StringComparison.OrdinalIgnoreCase))
+                {
+                    monto -= montoDescuento;
+                }
+
+                monto = Math.Max(monto, 0);
+
+                if (monto == 0)
+                    continue;
+
+                string descripcionConcepto = !string.IsNullOrWhiteSpace(vencimiento.Descripcion)
+                    ? vencimiento.Descripcion!
+                    : $"{concepto.TipoConcepto} {vencimiento.NroOrden}";
+
                 detalles.Add(new PagoDetalle
                 {
-                    Concepto = $"Cuota {i} - {curso.Nombre}",
-                    Monto = montoPorCuota,
-                    FechaVencimiento = fechaVencimientoCuotas,
+                    Concepto = $"{descripcionConcepto} - {curso.Nombre}",
+                    Monto = monto,
+                    FechaVencimiento = vencimiento.FechaVencimiento,
                     Estado = "Pendiente"
                 });
             }
-
-            if (curso.TienePractica == 'S' && montoPorPractica > 0)
-            {
-                detalles.Add(new PagoDetalle
-                {
-                    Concepto = $"Práctica {i} - {curso.Nombre}",
-                    Monto = montoPorPractica,
-                    FechaVencimiento = fechaVencimientoCuotas,
-                    Estado = "Pendiente"
-                });
-            }
-
-            fechaVencimientoCuotas = fechaVencimientoCuotas.AddMonths(1); // Avanza un mes desde los 30 días
         }
 
-        // 🔹 3. Encabezado
+        if (!detalles.Any())
+        {
+            throw new ReglasdeNegocioException("No se generaron pagos para la inscripción porque el curso no tiene vencimientos activos.");
+        }
+
         PagoEncabezado pagoEncabezado = new PagoEncabezado
         {
             IdInscripcion = idInscripcion,
             Total = detalles.Sum(d => d.Monto),
             TipoCuenta = "Credito",
-            Descuento = montoDescuento + montoDescuentoPractica,
+            Descuento = montoDescuento + montoDescuentoPractica + montoDescuentoMatricula,
             Observacion = $"Generación de pagos por inscripción - {curso.Nombre}"
         };
 
         await _pagosRepository.InsertarPagoConDetalles(pagoEncabezado, detalles);
-        _logger.LogInformation("Pagos generados exitosamente para la inscripción ID: {IdInscripcion}", idInscripcion);
+
+        _logger.LogInformation(
+            "Pagos generados exitosamente para la inscripción ID: {IdInscripcion}",
+            idInscripcion);
     }
-
-
 
     public async Task<int> Actualizar(int idInscripcion, InscripcionRequest request)
     {

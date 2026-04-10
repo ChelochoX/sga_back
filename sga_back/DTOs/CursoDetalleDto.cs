@@ -1,6 +1,6 @@
-﻿namespace sga_back.Models;
+﻿namespace sga_back.DTOs;
 
-public class Curso
+public class CursoDetalleDto
 {
     public int IdCurso { get; set; }
     public string Nombre { get; set; } = string.Empty;
@@ -11,5 +11,5 @@ public class Curso
     public DateTime FechaFin { get; set; }
     public bool Activo { get; set; }
 
-    public List<CursoConcepto> Conceptos { get; set; } = new();
+    public List<CursoConceptoDto> Conceptos { get; set; } = new();
 }

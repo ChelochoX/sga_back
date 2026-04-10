@@ -38,6 +38,13 @@ public class CursosController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> ObtenerDetallePorId(int id)
+    {
+        var curso = await _service.ObtenerDetallePorId(id);
+        return Ok(curso);
+    }
+
     [HttpPost("obtener-cursos")]
     public async Task<IActionResult> ObtenerCursos([FromBody] ObtenerCursosRequest request)
     {
@@ -50,7 +57,6 @@ public class CursosController : ControllerBase
     {
         await _service.CambiarEstado(id, request.Activo);
         return NoContent();
-
     }
 
 }

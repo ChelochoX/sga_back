@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using sga_back.DTOs;
 using sga_back.Models;
 using sga_back.Request;
 
@@ -8,6 +9,12 @@ public class CursosAutomapping : Profile
 {
     public CursosAutomapping()
     {
-        _ = CreateMap<CursoRequest, Curso>();
+        CreateMap<CursoRequest, Curso>();
+        CreateMap<CursoConceptoRequest, CursoConcepto>();
+        CreateMap<CursoConceptoVencimientoRequest, CursoConceptoVencimiento>();
+
+        CreateMap<Curso, CursoDetalleDto>();
+        CreateMap<CursoConcepto, CursoConceptoDto>();
+        CreateMap<CursoConceptoVencimiento, CursoConceptoVencimientoDto>();
     }
 }

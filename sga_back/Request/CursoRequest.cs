@@ -4,56 +4,70 @@ namespace sga_back.Request;
 
 public class CursoRequest
 {
-    public required string Nombre { get; set; }
+    public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
-    public required int Duracion { get; set; }
-    public required string UnidadDuracion { get; set; }
-    public required int CantidadCuota { get; set; }
-    public required decimal MontoMatricula { get; set; }
-    public required decimal MontoCuota { get; set; }
-    public required char TienePractica { get; set; }
-    public required decimal CostoPractica { get; set; }
-    public required DateTime FechaInicio { get; set; }
-    public required DateTime FechaFin { get; set; }
-    public required bool Activo { get; set; }
+    public int Duracion { get; set; }
+    public string UnidadDuracion { get; set; } = string.Empty;
+    public DateTime FechaInicio { get; set; }
+    public DateTime FechaFin { get; set; }
+    public bool Activo { get; set; }
+
+    public List<CursoConceptoRequest> Conceptos { get; set; } = new();
 }
 public class CursoRequestValidator : AbstractValidator<CursoRequest>
 {
     public CursoRequestValidator()
     {
-        _ = RuleFor(c => c.Nombre)
-            .NotEmpty().WithMessage("El nombre del curso es obligatorio.")
-            .MaximumLength(150).WithMessage("El nombre no puede superar los 150 caracteres.");
+        RuleFor(x => x.Nombre)
+            .NotEmpty()
+            .WithMessage("El nombre es obligatorio.")
+            .MaximumLength(150)
+            .WithMessage("El nombre no puede superar los 150 caracteres.");
 
-        _ = RuleFor(c => c.Duracion)
-            .GreaterThan(0).WithMessage("La duración del curso debe ser mayor a 0.");
+        RuleFor(x => x.Descripcion)
+            .MaximumLength(1000)
+            .When(x => !string.IsNullOrWhiteSpace(x.Descripcion))
+            .WithMessage("La descripción no puede superar los 1000 caracteres.");
 
-        _ = RuleFor(c => c.UnidadDuracion)
-            .NotEmpty().WithMessage("La unidad de duración es obligatoria.")
-            .Must(u => new[] { "Horas", "Dias", "Semanas", "Meses" }.Contains(u))
-            .WithMessage("La unidad de duración debe ser 'Horas', 'Dias', 'Semanas' o 'Meses'.");
+        RuleFor(x => x.Duracion)
+            .GreaterThan(0)
+            .WithMessage("La duración debe ser mayor a 0.");
 
-        _ = RuleFor(c => c.CantidadCuota)
-            .GreaterThan(0).WithMessage("La cantidad de cuotas debe ser mayor a 0.");
+        RuleFor(x => x.UnidadDuracion)
+            .NotEmpty()
+            .WithMessage("La unidad de duración es obligatoria.")
+            .Must(x => new[] { "Meses", "Semanas", "Dias", "Horas" }.Contains(x))
+            .WithMessage("La unidad de duración debe ser: Meses, Semanas, Dias u Horas.");
 
-        _ = RuleFor(c => c.MontoMatricula)
-            .GreaterThanOrEqualTo(0).WithMessage("El monto de la matrícula no puede ser negativo.");
+        RuleFor(x => x.FechaInicio)
+            .NotEmpty()
+            .WithMessage("La fecha de inicio es obligatoria.");
 
-        _ = RuleFor(c => c.MontoCuota)
-            .GreaterThan(0).WithMessage("El monto de la cuota debe ser mayor a 0.");
+        RuleFor(x => x.FechaFin)
+            .NotEmpty()
+            .WithMessage("La fecha de fin es obligatoria.")
+            .GreaterThanOrEqualTo(x => x.FechaInicio)
+            .WithMessage("La fecha fin no puede ser menor a la fecha inicio.");
 
-        _ = RuleFor(c => c.TienePractica)
-            .NotEmpty().WithMessage("Debe especificar si el curso tiene práctica.");
+        RuleFor(x => x.Conceptos)
+            .NotNull()
+            .WithMessage("La lista de conceptos es obligatoria.")
+            .Must(x => x.Count > 0)
+            .WithMessage("Debe enviar al menos un concepto para el curso.");
 
-        _ = RuleFor(c => c.CostoPractica)
-            .GreaterThanOrEqualTo(0).WithMessage("El costo de la práctica no puede ser negativo.");
+        RuleForEach(x => x.Conceptos)
+            .SetValidator(new CursoConceptoRequestValidator());
 
-        _ = RuleFor(c => c.FechaInicio)
-            .NotEmpty().WithMessage("La fecha de inicio es obligatoria.");
+        RuleFor(x => x.Conceptos)
+            .Must(x => x.Select(c => c.TipoConcepto).Distinct().Count() == x.Count)
+            .WithMessage("No se pueden repetir tipos de concepto dentro del curso.");
 
-        //_ = RuleFor(c => c.FechaFin)
-        //    .NotEmpty().WithMessage("La fecha de fin es obligatoria.")
-        //    .GreaterThan(c => c.FechaInicio).WithMessage("La fecha de fin debe ser posterior a la fecha de inicio.");
+        RuleFor(x => x.Conceptos)
+            .Must(x => x.Any(c => c.TipoConcepto == "Matricula"))
+            .WithMessage("Debe existir al menos un concepto de tipo Matricula.");
 
+        RuleFor(x => x.Conceptos)
+            .Must(x => x.Any(c => c.TipoConcepto == "Cuota"))
+            .WithMessage("Debe existir al menos un concepto de tipo Cuota.");
     }
 }
