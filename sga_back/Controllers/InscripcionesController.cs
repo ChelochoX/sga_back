@@ -19,11 +19,17 @@ public class InscripcionesController : ControllerBase
     }
 
     [HttpPost]
-    //[PermisoRequerido("Crear", "Inscripciones")]
     public async Task<IActionResult> Insertar([FromBody] InscripcionRequest request)
     {
         int id = await _service.Insertar(request);
         return Ok(id);
+    }
+
+    [HttpPost("preview-plan-pago")]
+    public async Task<IActionResult> ObtenerPreviewPlanPago([FromBody] InscripcionRequest request)
+    {
+        var preview = await _service.ObtenerPreviewPlanPago(request);
+        return Ok(preview);
     }
 
     [HttpPut("{id}")]

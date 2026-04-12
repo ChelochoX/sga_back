@@ -101,13 +101,13 @@ public class CursosService : ICursosService
         return await _repository.ObtenerDetallePorId(idCurso);
     }
 
-    public async Task<IEnumerable<CursoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request)
+    public async Task<IEnumerable<CursoListadoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request)
     {
         var validationResult = await _validatorFecha.ValidateAsync(request);
         if (!validationResult.IsValid)
             throw new ValidationException(validationResult.Errors);
 
-        _logger.LogInformation("Llamando a repositorio para obtener cursos por fechas...");
+        _logger.LogInformation("Llamando a repositorio para obtener cursos por fechas con conceptos y vencimientos...");
         return await _repository.ObtenerCursosPorFecha(request);
     }
 

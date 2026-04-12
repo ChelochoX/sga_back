@@ -13,4 +13,6 @@ public interface IInscripcionesService
     Task<IEnumerable<InscripcionDetalleDto>> ObtenerTodas(InscripcionFiltroRequest filtro);
     Task<IEnumerable<EstudianteDto>> ObtenerEstudiantes(string? search);
     Task<IEnumerable<CursosInscripcionDto>> ObtenerCursos(string? search);
+    Task<InscripcionPlanPagoPreviewDto> ObtenerPreviewPlanPago(InscripcionRequest request);
+
 }

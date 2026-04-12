@@ -486,7 +486,7 @@ public class CursosRepository : ICursosRepository
         }
     }
 
-    public async Task<IEnumerable<CursoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request)
+    public async Task<IEnumerable<CursoListadoDto>> ObtenerCursosPorFecha(ObtenerCursosRequest request)
     {
         try
         {
@@ -496,45 +496,110 @@ public class CursosRepository : ICursosRepository
                 request.FechaFin,
                 request.Activo);
 
-            string query = @"
-                SELECT
-                    id_curso           AS IdCurso,
-                    nombre             AS Nombre,
-                    descripcion        AS Descripcion,
-                    duracion           AS Duracion,
-                    unidad_duracion    AS UnidadDuracion,
-                    cantidad_cuota     AS CantidadCuota,
-                    monto_cuota        AS MontoCuota,
-                    tiene_practica     AS TienePractica,
-                    costo_practica     AS CostoPractica,
-                    fecha_inicio       AS FechaInicio,
-                    fecha_fin          AS FechaFin,
-                    monto_matricula    AS MontoMatricula,
-                    activo             AS Activo
-                FROM Cursos
-                WHERE
-                    (@FechaInicio IS NULL OR fecha_inicio >= @FechaInicio)
-                    AND (@FechaFin IS NULL OR fecha_inicio <= @FechaFin)
-                    AND (@Activo IS NULL OR activo = @Activo)
-                ORDER BY fecha_inicio DESC;";
+            if (_conexion.State != ConnectionState.Open)
+                _conexion.Open();
 
-            var cursos = await _conexion.QueryAsync<CursoDto>(
+            string query = @"
+            SELECT
+                c.id_curso         AS IdCurso,
+                c.nombre           AS Nombre,
+                c.descripcion      AS Descripcion,
+                c.duracion         AS Duracion,
+                c.unidad_duracion  AS UnidadDuracion,
+                c.fecha_inicio     AS FechaInicio,
+                c.fecha_fin        AS FechaFin,
+                c.activo           AS Activo
+            FROM Cursos c
+            WHERE
+                (@FechaInicio IS NULL OR c.fecha_inicio >= @FechaInicio)
+                AND (@FechaFin IS NULL OR c.fecha_inicio <= @FechaFin)
+                AND (@Activo IS NULL OR c.activo = @Activo)
+            ORDER BY c.fecha_inicio DESC, c.id_curso DESC;
+
+            SELECT
+                cc.id_curso_concepto AS IdCursoConcepto,
+                cc.id_curso          AS IdCurso,
+                cc.tipo_concepto     AS TipoConcepto,
+                cc.descripcion       AS Descripcion,
+                cc.activo            AS Activo
+            FROM CursoConceptos cc
+            INNER JOIN Cursos c ON c.id_curso = cc.id_curso
+            WHERE
+                (@FechaInicio IS NULL OR c.fecha_inicio >= @FechaInicio)
+                AND (@FechaFin IS NULL OR c.fecha_inicio <= @FechaFin)
+                AND (@Activo IS NULL OR c.activo = @Activo)
+            ORDER BY cc.id_curso, cc.id_curso_concepto;
+
+            SELECT
+                ccv.id_curso_concepto_vencimiento AS IdCursoConceptoVencimiento,
+                ccv.id_curso_concepto             AS IdCursoConcepto,
+                ccv.nro_orden                     AS NroOrden,
+                ccv.monto                         AS Monto,
+                ccv.fecha_vencimiento             AS FechaVencimiento,
+                ccv.descripcion                   AS Descripcion,
+                ccv.activo                        AS Activo
+            FROM CursoConceptosVencimientos ccv
+            INNER JOIN CursoConceptos cc ON cc.id_curso_concepto = ccv.id_curso_concepto
+            INNER JOIN Cursos c ON c.id_curso = cc.id_curso
+            WHERE
+                (@FechaInicio IS NULL OR c.fecha_inicio >= @FechaInicio)
+                AND (@FechaFin IS NULL OR c.fecha_inicio <= @FechaFin)
+                AND (@Activo IS NULL OR c.activo = @Activo)
+            ORDER BY ccv.id_curso_concepto, ccv.nro_orden;";
+
+            using var multi = await _conexion.QueryMultipleAsync(
                 query,
                 new
                 {
                     FechaInicio = request.FechaInicio,
                     FechaFin = request.FechaFin,
-                    request.Activo
+                    Activo = request.Activo
                 });
 
-            _logger.LogInformation("Se obtuvieron {Cantidad} cursos.", cursos.Count());
+            var cursos = (await multi.ReadAsync<CursoListadoDto>()).ToList();
+            var conceptos = (await multi.ReadAsync<CursoConceptoListadoDto>()).ToList();
+            var vencimientos = (await multi.ReadAsync<CursoConceptoVencimientoListadoDto>()).ToList();
+
+            var conceptosPorCurso = conceptos
+                .GroupBy(x => x.IdCurso)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var vencimientosPorConcepto = vencimientos
+                .GroupBy(x => x.IdCursoConcepto)
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.NroOrden).ToList());
+
+            foreach (var curso in cursos)
+            {
+                if (!conceptosPorCurso.TryGetValue(curso.IdCurso, out var conceptosCurso))
+                {
+                    curso.Conceptos = new List<CursoConceptoListadoDto>();
+                    continue;
+                }
+
+                foreach (var concepto in conceptosCurso)
+                {
+                    if (vencimientosPorConcepto.TryGetValue(concepto.IdCursoConcepto, out var vencimientosConcepto))
+                        concepto.Vencimientos = vencimientosConcepto;
+                    else
+                        concepto.Vencimientos = new List<CursoConceptoVencimientoListadoDto>();
+                }
+
+                curso.Conceptos = conceptosCurso;
+            }
+
+            _logger.LogInformation("Se obtuvieron {Cantidad} cursos con conceptos y vencimientos.", cursos.Count);
 
             return cursos;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener los cursos");
+            _logger.LogError(ex, "Error al obtener los cursos con conceptos y vencimientos");
             throw new RepositoryException("Ocurrió un error al intentar obtener los cursos.", ex);
+        }
+        finally
+        {
+            if (_conexion.State == ConnectionState.Open)
+                _conexion.Close();
         }
     }
 

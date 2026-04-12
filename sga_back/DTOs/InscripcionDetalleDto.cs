@@ -9,10 +9,16 @@ public class InscripcionDetalleDto
     public string NombreCurso { get; set; } = string.Empty;
     public DateTime FechaInscripcion { get; set; }
     public string Estado { get; set; } = string.Empty;
+
     public decimal MontoDescuento { get; set; }
-    public string MotivoDescuento { get; set; } = string.Empty;
+    public string? MotivoDescuento { get; set; }
+
     public decimal MontoDescPractica { get; set; }
-    public string MotivoDescPractica { get; set; } = string.Empty;
+    public string? MotivoDescPractica { get; set; }
+
     public decimal MontoDescMatricula { get; set; }
-    public string MotivoDescMatricula { get; set; } = string.Empty;
+    public string? MotivoDescMatricula { get; set; }
+
+    public decimal TotalPagos { get; set; }
+    public int CantidadPagos { get; set; }
 }
